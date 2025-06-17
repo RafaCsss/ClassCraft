@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Sistema RPG Educativo</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1><span>Class</span>Craft</h1>
+            <p style="text-align: center; color: #4a5568; margin-top: 10px;">
+                Sistema RPG Educativo - Convierte tu clase en una aventura
+            </p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card" style="text-align: center;">
+            <h2>Bienvenido a ClassCraft</h2>
+            <p style="color: #718096; font-size: 1.1em; margin: 20px 0;">
+                Gamifica tu experiencia educativa con personajes RPG, habilidades mágicas y trabajo en equipo
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0;">
+                <a href="/login.html" class="btn btn-primary btn-full">
+                    Iniciar Sesión
+                </a>
+                <a href="/register.html" class="btn btn-success btn-full">
+                    Crear Cuenta
+                </a>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div class="card">
+                <h3>Para Profesores</h3>
+                <ul style="text-align: left; color: #4a5568;">
+                    <li>Crea clases con códigos únicos</li>
+                    <li>Gestiona estudiantes en tiempo real</li>
+                    <li>Da/quita XP por participación</li>
+                    <li>Modifica salud/energía como penalizaciones</li>
+                    <li>Dashboard completo de seguimiento</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Para Estudiantes</h3>
+                <ul style="text-align: left; color: #4a5568;">
+                    <li>Crea tu personaje RPG único</li>
+                    <li>Elige clase y raza con stats balanceados</li>
+                    <li>Usa habilidades mágicas en clase</li>
+                    <li>Forma equipos colaborativos</li>
+                    <li>Sube de nivel ganando experiencia</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Funcionalidades del Sistema</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                <div class="stat-card">
+                    <span class="stat-value">3</span>
+                    <span class="stat-label">3 Clases de Personaje</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">3</span>
+                    <span class="stat-label">3 Razas Únicas</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">6+</span>
+                    <span class="stat-label">6+ Habilidades</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">4</span>
+                    <span class="stat-label">Equipos de 4</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="background: #e6fffa; border: 1px solid #4fd1c7;">
+            <h3 style="color: #234e52;">Demo & Testing</h3>
+            <p style="color: #234e52;">
+                Sistema completo funcionando con datos de prueba incluidos
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/dev.html" class="btn btn-dev">Página DEV</a>
+                <a href="http://localhost:3000/api/test" target="_blank" class="btn btn-secondary">API Stats</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Credenciales de Prueba</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                    <h4 style="color: #4a5568;">Profesor</h4>
+                    <p><strong>Email:</strong> profesor@test.com</p>
+                    <p><strong>Password:</strong> 123456</p>
+                    <button onclick="location.href='/login.html'" class="btn btn-primary btn-full">Probar</button>
+                </div>
+                
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                    <h4 style="color: #4a5568;">Estudiante</h4>
+                    <p><strong>Email:</strong> ana@test.com</p>
+                    <p><strong>Password:</strong> 123456</p>
+                    <button onclick="location.href='/login.html'" class="btn btn-success btn-full">Probar</button>
+                </div>
+            </div>
+            
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; color: #667eea;">Ver más estudiantes</summary>
+                <div style="background: #f7fafc; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px;">
+                    • carlos@test.com / 123456<br>
+                    • maria@test.com / 123456<br>
+                    • pedro@test.com / 123456
+                </div>
+            </details>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; color: #718096;">
+            <p>ClassCraft - Sistema RPG Educativo Local</p>
+            <p>Desarrollado con Node.js + Express + MongoDB + Vanilla JS</p>
+        </div>
+    </div>
+
+    <script>
+        // Redirigir si ya está logueado
+        const token = localStorage.getItem('classcraft_token');
+        if (token) {
+            // Mostrar mensaje y redirigir
+            const userInfo = JSON.parse(localStorage.getItem('classcraft_user') || '{}');
+            if (userInfo.nombre) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-info';
+                alertDiv.textContent = `Ya tienes sesión activa como ${userInfo.nombre}. Redirigiendo...`;
+                document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Mis Clases</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
+                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html" id="navPersonaje">⚔️ Mi Personaje</a>
+            <a href="/clases.html" class="active">🏫 Clases</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <!-- VISTA PROFESOR -->
+        <div id="vistaProfesor" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>🏫 Mis Clases</h2>
+                    <a href="/crear-clase.html" class="btn btn-success">➕ Crear Nueva Clase</a>
+                </div>
+
+                <div id="statsProfesor" class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalClasesProfesor">0</span>
+                        <span class="stat-label">Clases Creadas</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalEstudiantesProfesor">0</span>
+                        <span class="stat-label">Estudiantes Total</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="clasesActivasProfesor">0</span>
+                        <span class="stat-label">Clases Activas</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>📚 Lista de Clases</h3>
+                    <div>
+                        <input type="search" id="buscarClaseProfesor" placeholder="Buscar clase..." 
+                               style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="listaClasesProfesor">
+                    <div class="loading">Cargando clases...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA ESTUDIANTE -->
+        <div id="vistaEstudiante" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>🎒 Mis Clases</h2>
+                    <a href="/unirse-clase.html" class="btn btn-primary">➕ Unirse a Clase</a>
+                </div>
+
+                <div id="statsEstudiante" class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalClasesEstudiante">0</span>
+                        <span class="stat-label">Clases Inscritas</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="promedioNivelEstudiante">0</span>
+                        <span class="stat-label">Nivel Promedio</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="xpTotalEstudiante">0</span>
+                        <span class="stat-label">XP Total</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>📖 Mis Clases Inscritas</h3>
+                    <div>
+                        <input type="search" id="buscarClaseEstudiante" placeholder="Buscar clase..." 
+                               style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="listaClasesEstudiante">
+                    <div class="loading">Cargando clases...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let clasesData = [];
+
+        if (!requireAuth()) {
+            // requireAuth ya redirige si no está autenticado
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userGreeting = document.getElementById('userGreeting');
+            userGreeting.textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
+
+            // Mostrar vista según rol
+            if (currentUser.rol === 'profesor') {
+                document.getElementById('vistaProfesor').classList.remove('hidden');
+                document.getElementById('navPersonaje').style.display = 'none';
+                await cargarClasesProfesor();
+                setupBuscadorProfesor();
+            } else if (currentUser.rol === 'estudiante') {
+                document.getElementById('vistaEstudiante').classList.remove('hidden');
+                await cargarClasesEstudiante();
+                setupBuscadorEstudiante();
+            } else {
+                showAlert('Rol no válido para ver clases', 'error');
+                window.location.href = '/dashboard.html';
+            }
+        });
+
+        // ===== FUNCIONES PROFESOR =====
+        async function cargarClasesProfesor() {
+            try {
+                const response = await fetch('/api/clases/mis-clases', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error cargando clases');
+                }
+
+                const data = await response.json();
+                clasesData = data.clases;
+
+                // Actualizar stats
+                const totalClases = clasesData.length;
+                const totalEstudiantes = clasesData.reduce((sum, clase) => sum + clase.estudiantes_count, 0);
+                const clasesActivas = clasesData.filter(clase => clase.activa).length;
+
+                document.getElementById('totalClasesProfesor').textContent = totalClases;
+                document.getElementById('totalEstudiantesProfesor').textContent = totalEstudiantes;
+                document.getElementById('clasesActivasProfesor').textContent = clasesActivas;
+
+                mostrarClasesProfesor(clasesData);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('listaClasesProfesor').innerHTML = `
+                    <div class="alert alert-error">
+                        Error cargando clases: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function mostrarClasesProfesor(clases) {
+            const listaElement = document.getElementById('listaClasesProfesor');
+            
+            if (clases.length === 0) {
+                listaElement.innerHTML = `
+                    <div class="alert alert-info">
+                        <h4>🎓 ¡Comienza tu primera clase!</h4>
+                        <p>No has creado ninguna clase aún. Crea tu primera clase para comenzar a gamificar el aprendizaje.</p>
+                        <a href="/crear-clase.html" class="btn btn-primary">Crear Mi Primera Clase</a>
+                    </div>
+                `;
+                return;
+            }
+
+            listaElement.innerHTML = clases.map(clase => {
+                const fechaCreacion = new Date(clase.fecha_creacion).toLocaleDateString();
+                const statusColor = clase.activa ? '#48bb78' : '#a0aec0';
+                const statusText = clase.activa ? 'Activa' : 'Inactiva';
+                
+                return `
+                    <div class="clase-card" style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                    <h4 style="color: #4a5568; margin: 0;">${clase.nombre}</h4>
+                                    <span style="background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                                        ${statusText}
+                                    </span>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                                    <div>
+                                        <p style="margin: 5px 0;"><strong>Código:</strong> 
+                                            <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${clase.codigo}</span>
+                                        </p>
+                                        <p style="margin: 5px 0;"><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
+                                        <p style="margin: 5px 0;"><strong>Equipos:</strong> ${clase.equipos_count}</p>
+                                    </div>
+                                    <div>
+                                        <p style="margin: 5px 0;"><strong>Creada:</strong> ${fechaCreacion}</p>
+                                        <p style="margin: 5px 0; color: #718096;">${clase.descripcion || 'Sin descripción'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <a href="/gestionar-clase.html?id=${clase.id}" class="btn btn-primary btn-sm">
+                                    ⚡ Gestionar
+                                </a>
+                                <button class="btn btn-secondary btn-sm" onclick="toggleClaseActiva('${clase.id}', ${clase.activa})">
+                                    ${clase.activa ? '⏸️ Pausar' : '▶️ Activar'}
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="verEstadisticasClase('${clase.id}')">
+                                    📊 Stats
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarClase('${clase.id}', '${clase.nombre}')">
+                                    🗑️ Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setupBuscadorProfesor() {
+            const buscador = document.getElementById('buscarClaseProfesor');
+            buscador.addEventListener('input', (e) => {
+                const termino = e.target.value.toLowerCase();
+                const clasesFiltradas = clasesData.filter(clase => 
+                    clase.nombre.toLowerCase().includes(termino) ||
+                    clase.codigo.toLowerCase().includes(termino) ||
+                    (clase.descripcion && clase.descripcion.toLowerCase().includes(termino))
+                );
+                mostrarClasesProfesor(clasesFiltradas);
+            });
+        }
+
+        // ===== FUNCIONES ESTUDIANTE =====
+        async function cargarClasesEstudiante() {
+            try {
+                const response = await fetch('/api/clases/mis-clases', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error cargando clases');
+                }
+
+                const data = await response.json();
+                clasesData = data.clases;
+
+                // Actualizar stats
+                const totalClases = clasesData.length;
+                // Para estudiantes, necesitaríamos datos del personaje para estos stats
+                document.getElementById('totalClasesEstudiante').textContent = totalClases;
+                document.getElementById('promedioNivelEstudiante').textContent = currentUser.nivel || 1;
+                document.getElementById('xpTotalEstudiante').textContent = currentUser.experiencia || 0;
+
+                mostrarClasesEstudiante(clasesData);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('listaClasesEstudiante').innerHTML = `
+                    <div class="alert alert-error">
+                        Error cargando clases: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function mostrarClasesEstudiante(clases) {
+            const listaElement = document.getElementById('listaClasesEstudiante');
+            
+            if (clases.length === 0) {
+                listaElement.innerHTML = `
+                    <div class="alert alert-info">
+                        <h4>🎒 ¡Únete a tu primera clase!</h4>
+                        <p>No estás inscrito en ninguna clase aún. Pide a tu profesor el código de clase para unirte.</p>
+                        <a href="/unirse-clase.html" class="btn btn-primary">Unirse a una Clase</a>
+                    </div>
+                `;
+                return;
+            }
+
+            listaElement.innerHTML = clases.map(clase => {
+                return `
+                    <div class="clase-card" style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
+                            <div>
+                                <h4 style="color: #4a5568; margin-bottom: 10px;">${clase.nombre}</h4>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                                    <div>
+                                        <p style="margin: 5px 0;"><strong>Profesor:</strong> ${clase.profesor}</p>
+                                        <p style="margin: 5px 0;"><strong>Código:</strong> 
+                                            <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${clase.codigo}</span>
+                                        </p>
+                                        <p style="margin: 5px 0;"><strong>Compañeros:</strong> ${clase.estudiantes_count} estudiantes</p>
+                                    </div>
+                                    <div>
+                                        <p style="margin: 5px 0; color: #718096;">${clase.descripcion || 'Sin descripción'}</p>
+                                        <p style="margin: 5px 0;"><strong>Modo:</strong> ${clase.configuracion?.modo_competitivo ? 'Competitivo' : 'Colaborativo'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="btn btn-primary btn-sm" onclick="verProgreso('${clase.id}')">
+                                    📈 Mi Progreso
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="verCompañeros('${clase.id}')">
+                                    👥 Compañeros
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="verMisiones('${clase.id}')">
+                                    🎯 Misiones
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setupBuscadorEstudiante() {
+            const buscador = document.getElementById('buscarClaseEstudiante');
+            buscador.addEventListener('input', (e) => {
+                const termino = e.target.value.toLowerCase();
+                const clasesFiltradas = clasesData.filter(clase => 
+                    clase.nombre.toLowerCase().includes(termino) ||
+                    clase.profesor.toLowerCase().includes(termino) ||
+                    clase.codigo.toLowerCase().includes(termino)
+                );
+                mostrarClasesEstudiante(clasesFiltradas);
+            });
+        }
+
+        // ===== FUNCIONES ACCIONES PROFESOR =====
+        async function toggleClaseActiva(claseId, estadoActual) {
+            const nuevoEstado = !estadoActual;
+            const accion = nuevoEstado ? 'activar' : 'pausar';
+            
+            if (!confirm(`¿Estás seguro de ${accion} esta clase?`)) return;
+
+            try {
+                const response = await fetch(`/api/clases/${claseId}/configuracion`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    },
+                    body: JSON.stringify({ activa: nuevoEstado })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error cambiando estado de la clase');
+                }
+
+                showAlert(`Clase ${nuevoEstado ? 'activada' : 'pausada'} exitosamente`, 'success');
+                await cargarClasesProfesor();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function verEstadisticasClase(claseId) {
+            // Redirigir a gestionar-clase que ya tiene las stats
+            window.location.href = `/gestionar-clase.html?id=${claseId}`;
+        }
+
+        function confirmarEliminarClase(claseId, nombreClase) {
+            if (!confirm(`¿Estás SEGURO de eliminar la clase "${nombreClase}"?\n\nEsta acción NO se puede deshacer.`)) return;
+            
+            if (!confirm(`Última confirmación: Se eliminarán TODOS los datos de la clase "${nombreClase}" incluyendo estudiantes, equipos y progreso.`)) return;
+            
+            eliminarClase(claseId);
+        }
+
+        async function eliminarClase(claseId) {
+            try {
+                const response = await fetch(`/api/clases/${claseId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error eliminando la clase');
+                }
+
+                showAlert('Clase eliminada exitosamente', 'success');
+                await cargarClasesProfesor();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        // ===== FUNCIONES ACCIONES ESTUDIANTE =====
+        function verProgreso(claseId) {
+            // Implementar vista de progreso individual
+            showAlert('Función de progreso en desarrollo', 'info');
+        }
+
+        function verCompañeros(claseId) {
+            // Implementar vista de compañeros de clase
+            showAlert('Función de compañeros en desarrollo', 'info');
+        }
+
+        function verMisiones(claseId) {
+            // Implementar vista de misiones de la clase
+            showAlert('Función de misiones en desarrollo', 'info');
+        }
+    </script>
+
+    <style>
+        .clase-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            min-width: 100px;
+        }
+        
+        .nav a.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+            border-color: #e53e3e;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+            border-color: #c53030;
+        }
+    </style>
+</body>
+</html>

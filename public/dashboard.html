@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
+                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html" id="navPersonaje">⚔️ Mi Personaje</a>
+            <a href="/clases.html">🏫 Clases</a>
+            <a href="/equipos.html">⚔️ Equipos</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <!-- DASHBOARD ESTUDIANTE -->
+        <div id="dashboardEstudiante" class="hidden">
+            <div class="card">
+                <h2>📊 Mi Progreso</h2>
+                <div id="statsPersonaje">
+                    <div class="loading">Cargando stats...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎮 Mi Personaje</h2>
+                <div id="personajeInfo">
+                    <div class="loading">Cargando personaje...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🏫 Mis Clases</h2>
+                <div id="clasesEstudiante">
+                    <div class="loading">Cargando clases...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PROFESOR -->
+        <div id="dashboardProfesor" class="hidden">
+            <div class="card">
+                <h2>👨‍🏫 Panel del Profesor</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalClases">0</span>
+                        <span class="stat-label">Clases Creadas</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalEstudiantes">0</span>
+                        <span class="stat-label">Estudiantes Total</span>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="/crear-clase.html" class="btn btn-success">➕ Crear Nueva Clase</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🏫 Mis Clases</h2>
+                <div id="clasesProfesor">
+                    <div class="loading">Cargando clases...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD ADMIN -->
+        <div id="dashboardAdmin" class="hidden">
+            <div class="card">
+                <h2>⚙️ Panel de Administración</h2>
+                <p>Funcionalidades de admin aquí...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Verificar autenticación
+        if (!requireAuth()) {
+            // requireAuth ya redirige si no está autenticado
+        }
+
+        // Cargar dashboard según rol
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userGreeting = document.getElementById('userGreeting');
+            userGreeting.textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
+
+            // Mostrar dashboard según rol
+            if (currentUser.rol === 'estudiante') {
+                document.getElementById('dashboardEstudiante').classList.remove('hidden');
+                await loadEstudianteDashboard();
+            } else if (currentUser.rol === 'profesor') {
+                document.getElementById('dashboardProfesor').classList.remove('hidden');
+                document.getElementById('navPersonaje').style.display = 'none';
+                await loadProfesorDashboard();
+            } else if (currentUser.rol === 'admin') {
+                document.getElementById('dashboardAdmin').classList.remove('hidden');
+                document.getElementById('navPersonaje').style.display = 'none';
+            }
+        });
+
+        // Cargar dashboard de estudiante
+        async function loadEstudianteDashboard() {
+            try {
+                // Cargar stats del personaje
+                const statsElement = document.getElementById('statsPersonaje');
+                try {
+                    const stats = await getPersonajeStats();
+                    
+                    // Calcular progreso hacia siguiente nivel
+                    const xpActualNivel = stats.experiencia % 100; // XP en el nivel actual
+                    const xpParaSiguienteNivel = 100; // Siempre 100 XP por nivel
+                    
+                    statsElement.innerHTML = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-value">${stats.nivel}</span>
+                                <span class="stat-label">Nivel</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-value">${stats.experiencia}</span>
+                                <span class="stat-label">XP Total</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin: 20px 0;">
+                            <strong>Salud:</strong> ${renderProgressBar(stats.salud.actual, stats.salud.maxima, 'health')}
+                        </div>
+                        
+                        <div style="margin: 20px 0;">
+                            <strong>Energía:</strong> ${renderProgressBar(stats.energia.actual, stats.energia.maxima, 'energy')}
+                        </div>
+                        
+                        <div style="margin: 20px 0;">
+                            <strong>XP hasta siguiente nivel:</strong> ${renderProgressBar(xpActualNivel, xpParaSiguienteNivel, 'xp')}
+                            <small style="color: #718096; display: block; margin-top: 5px;">
+                                ${xpActualNivel}/100 XP (Faltan ${100 - xpActualNivel} XP para nivel ${stats.nivel + 1})
+                            </small>
+                        </div>
+                    `;
+                } catch (error) {
+                    statsElement.innerHTML = `
+                        <div class="alert alert-info">
+                            No tienes personaje creado. <a href="/crear-personaje.html">Crear personaje</a>
+                        </div>
+                    `;
+                }
+
+                // Cargar info del personaje
+                const personajeElement = document.getElementById('personajeInfo');
+                try {
+                    const personajeData = await getMyPersonaje();
+                    const p = personajeData.personaje;
+                    
+                    personajeElement.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <p><strong>Clase:</strong> ${p.clase_personaje_id.nombre}</p>
+                                <p><strong>Raza:</strong> ${p.raza_id.nombre}</p>
+                                <p><strong>Nivel:</strong> ${p.nivel}</p>
+                                <p><strong>Equipo:</strong> ${p.equipo_id?.nombre || 'Sin equipo'}</p>
+                            </div>
+                            <div>
+                                <p><strong>Monedas:</strong> ${personajeData.inventario.monedas}</p>
+                                <p><strong>Habilidades:</strong> ${personajeData.habilidades_disponibles.length}</p>
+                                <p><strong>Efectos activos:</strong> ${personajeData.efectos_activos.length}</p>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="window.location.href='/habilidades.html'">
+                                🔮 Usar Habilidades
+                            </button>
+                        </div>
+                    `;
+                } catch (error) {
+                    personajeElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <p>No tienes personaje creado.</p>
+                            <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
+                        </div>
+                    `;
+                }
+
+                // Cargar clases del estudiante
+                const clasesElement = document.getElementById('clasesEstudiante');
+                try {
+                    const clasesData = await getMyClases();
+                    
+                    if (clasesData.clases.length === 0) {
+                        clasesElement.innerHTML = `
+                            <div class="alert alert-info">
+                                <p>No estás registrado en ninguna clase.</p>
+                                <a href="/unirse-clase.html" class="btn btn-primary">Unirse a una Clase</a>
+                            </div>
+                        `;
+                    } else {
+                        clasesElement.innerHTML = clasesData.clases.map(clase => `
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                                <h4>${clase.nombre}</h4>
+                                <p><strong>Código:</strong> ${clase.codigo}</p>
+                                <p><strong>Profesor:</strong> ${clase.profesor}</p>
+                                <p><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
+                                <p><strong>Descripción:</strong> ${clase.descripcion}</p>
+                            </div>
+                        `).join('');
+                    }
+                } catch (error) {
+                    clasesElement.innerHTML = `<div class="alert alert-error">Error cargando clases: ${error.message}</div>`;
+                }
+
+            } catch (error) {
+                showAlert('Error cargando dashboard: ' + error.message, 'error');
+            }
+        }
+
+        // Cargar dashboard de profesor
+        async function loadProfesorDashboard() {
+            try {
+                const clasesData = await getMyClases();
+                
+                // Actualizar stats
+                document.getElementById('totalClases').textContent = clasesData.clases.length;
+                const totalEstudiantes = clasesData.clases.reduce((sum, clase) => sum + clase.estudiantes_count, 0);
+                document.getElementById('totalEstudiantes').textContent = totalEstudiantes;
+
+                // Mostrar clases
+                const clasesElement = document.getElementById('clasesProfesor');
+                
+                if (clasesData.clases.length === 0) {
+                    clasesElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <p>No has creado ninguna clase aún.</p>
+                            <a href="/crear-clase.html" class="btn btn-primary">Crear Primera Clase</a>
+                        </div>
+                    `;
+                } else {
+                    clasesElement.innerHTML = clasesData.clases.map(clase => `
+                        <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="color: #4a5568; margin-bottom: 5px;">${clase.nombre}</h4>
+                                    <p style="margin: 5px 0;"><strong>Código:</strong> <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${clase.codigo}</span></p>
+                                    <p style="margin: 5px 0;"><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
+                                    <p style="margin: 5px 0;"><strong>Equipos:</strong> ${clase.equipos_count}</p>
+                                </div>
+                                <div>
+                                    <a href="/gestionar-clase.html?id=${clase.id}" class="btn btn-primary">Gestionar</a>
+                                </div>
+                            </div>
+                            <p style="color: #718096; margin-top: 10px;">${clase.descripcion}</p>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (error) {
+                showAlert('Error cargando dashboard de profesor: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

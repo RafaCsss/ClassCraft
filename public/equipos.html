@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipos - ClassCraft</title>
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 id="titulo-equipos">⚔️ Equipos</h1>
+            <div class="header-actions">
+                <button onclick="location.href='dashboard.html'" class="btn btn-secondary">← Dashboard</button>
+                <button onclick="logout()" class="btn btn-danger">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <!-- Selector de Clase -->
+        <div class="clase-selector-container card" id="claseSelectorContainer" style="display: none;">
+            <h3>🏷️ Seleccionar Clase</h3>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <select id="selectorClase" class="form-select" style="min-width: 200px;">
+                    <option value="">Todos los equipos</option>
+                </select>
+                <button onclick="cambiarClase()" class="btn btn-primary">Cambiar Vista</button>
+                <span id="claseActualInfo" class="badge badge-info"></span>
+            </div>
+        </div>
+
+        <div class="equipos-container">
+            <!-- Panel para profesores -->
+            <div id="panel-profesor" class="profesor-panel card" style="display: none;">
+                <h3>👨‍🏫 Panel del Profesor</h3>
+                <div class="acciones-profesor">
+                    <button onclick="mostrarCrearEquipo()" class="btn btn-success">+ Crear Equipo</button>
+                    <button onclick="verRanking()" class="btn btn-info">🏆 Ver Ranking</button>
+                </div>
+            </div>
+
+            <!-- Panel para estudiantes -->
+            <div id="panel-estudiante" class="estudiante-panel card" style="display: none;">
+                <h3>🎓 Panel del Estudiante</h3>
+                <div id="mi-equipo-info"></div>
+                <div class="acciones-estudiante">
+                    <button onclick="salirDeEquipo()" class="btn btn-danger" id="btn-salir-equipo" style="display: none;">🚪 Salir del Equipo</button>
+                </div>
+            </div>
+
+            <!-- Lista de equipos -->
+            <div class="equipos-lista">
+                <div class="equipos-header">
+                    <h3>🏛️ Equipos Disponibles</h3>
+                </div>
+                <div id="equipos-grid" class="equipos-grid">
+                    <!-- Equipos se cargan aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal crear equipo -->
+        <div id="modal-crear-equipo" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>⚔️ Crear Nuevo Equipo</h3>
+                <form id="form-crear-equipo">
+                    <div class="form-group">
+                        <label for="clase-equipo">Clase:</label>
+                        <select id="clase-equipo" class="form-select">
+                            <option value="">Equipo Global (sin clase específica)</option>
+                        </select>
+                        <small class="form-help">Los equipos globales pueden incluir estudiantes de cualquier clase</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nombre-equipo">Nombre del Equipo:</label>
+                        <input type="text" id="nombre-equipo" required maxlength="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="color-equipo">Color del Equipo:</label>
+                        <input type="color" id="color-equipo" value="#007bff">
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-success">Crear Equipo</button>
+                        <button type="button" onclick="cerrarModal('modal-crear-equipo')" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal gestionar puntos -->
+        <div id="modal-puntos" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>💰 Gestionar Puntos</h3>
+                <div id="equipo-puntos-info"></div>
+                <form id="form-puntos">
+                    <div class="form-group">
+                        <label for="operacion-puntos">Operación:</label>
+                        <select id="operacion-puntos" required>
+                            <option value="agregar">➕ Agregar</option>
+                            <option value="quitar">➖ Quitar</option>
+                            <option value="establecer">🎯 Establecer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cantidad-puntos">Cantidad:</label>
+                        <input type="number" id="cantidad-puntos" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="razon-puntos">Razón:</label>
+                        <input type="text" id="razon-puntos" placeholder="Motivo del cambio...">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-success">Aplicar</button>
+                        <button type="button" onclick="cerrarModal('modal-puntos')" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal ranking -->
+        <div id="modal-ranking" class="modal" style="display: none;">
+            <div class="modal-content modal-large">
+                <h3>🏆 Ranking de Equipos</h3>
+                <div id="ranking-container"></div>
+                <div class="modal-actions">
+                    <button onclick="cerrarModal('modal-ranking')" class="btn btn-secondary">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userRole = null;
+        let equipoActual = null;
+        let equipos = [];
+        let clasesDisponibles = [];
+        let claseSeleccionada = null; // null = todos los equipos, ID = clase específica
+
+        document.addEventListener('DOMContentLoaded', function() {
+            verificarAuth();
+            inicializarPagina();
+        });
+
+        function verificarAuth() {
+            const token = localStorage.getItem('classcraft_token');
+            const user = JSON.parse(localStorage.getItem('classcraft_user') || '{}');
+            
+            if (!token) {
+                location.href = 'login.html';
+                return;
+            }
+            
+            userRole = user.rol;
+        }
+
+        async function inicializarPagina() {
+            if (userRole === 'profesor') {
+                document.getElementById('panel-profesor').style.display = 'block';
+                document.getElementById('titulo-equipos').textContent = '⚔️ Gestión de Equipos';
+                document.getElementById('claseSelectorContainer').style.display = 'block';
+                await cargarClasesProfesor();
+            } else {
+                document.getElementById('panel-estudiante').style.display = 'block';
+                await verificarEquipoEstudiante();
+                await cargarClasesEstudiante();
+                
+                // Mostrar selector solo si tiene múltiples clases
+                if (clasesDisponibles.length > 1) {
+                    document.getElementById('claseSelectorContainer').style.display = 'block';
+                }
+            }
+
+            await cargarEquipos();
+            configurarEventos();
+            actualizarInfoClaseActual();
+        }
+
+        async function cargarClasesProfesor() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch('/api/clases/mis-clases', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar clases');
+                }
+
+                const data = await response.json();
+                clasesDisponibles = data.clases;
+                
+                // Llenar selectores
+                llenarSelectoresClases();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar clases: ' + error.message);
+            }
+        }
+
+        async function cargarClasesEstudiante() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch('/api/clases/mis-clases', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar clases');
+                }
+
+                const data = await response.json();
+                clasesDisponibles = data.clases;
+                
+                // Solo llenar selector principal para estudiantes
+                const selectorClase = document.getElementById('selectorClase');
+                selectorClase.innerHTML = '<option value="">Todos los equipos disponibles</option>';
+                
+                clasesDisponibles.forEach(clase => {
+                    const option = document.createElement('option');
+                    option.value = clase.id;
+                    option.textContent = `${clase.nombre} (${clase.codigo})`;
+                    selectorClase.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function llenarSelectoresClases() {
+            // Selector principal
+            const selectorClase = document.getElementById('selectorClase');
+            selectorClase.innerHTML = '<option value="">Todos mis equipos</option>';
+            
+            // Selector del modal crear equipo
+            const claseEquipo = document.getElementById('clase-equipo');
+            claseEquipo.innerHTML = '<option value="">Equipo Global (sin clase específica)</option>';
+            
+            clasesDisponibles.forEach(clase => {
+                // Selector principal
+                const option1 = document.createElement('option');
+                option1.value = clase.id;
+                option1.textContent = `${clase.nombre} (${clase.codigo})`;
+                selectorClase.appendChild(option1);
+                
+                // Selector modal
+                const option2 = document.createElement('option');
+                option2.value = clase.id;
+                option2.textContent = `${clase.nombre} (${clase.codigo})`;
+                claseEquipo.appendChild(option2);
+            });
+        }
+
+        function cambiarClase() {
+            const selector = document.getElementById('selectorClase');
+            claseSeleccionada = selector.value || null;
+            
+            actualizarInfoClaseActual();
+            cargarEquipos();
+        }
+
+        function actualizarInfoClaseActual() {
+            const infoElement = document.getElementById('claseActualInfo');
+            
+            if (claseSeleccionada) {
+                const clase = clasesDisponibles.find(c => c.id === claseSeleccionada);
+                if (clase) {
+                    infoElement.textContent = `📚 ${clase.nombre}`;
+                    infoElement.style.display = 'inline';
+                } else {
+                    infoElement.style.display = 'none';
+                }
+            } else {
+                if (userRole === 'profesor') {
+                    infoElement.textContent = '🌐 Todos los equipos';
+                } else {
+                    infoElement.textContent = '🔍 Equipos disponibles';
+                }
+                infoElement.style.display = 'inline';
+            }
+        }
+
+        function configurarEventos() {
+            document.getElementById('form-crear-equipo').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await crearEquipo();
+            });
+
+            document.getElementById('form-puntos').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await gestionarPuntos();
+            });
+        }
+
+        async function cargarEquipos() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                
+                // Construir URL con parámetros
+                let url = '/api/equipos/';
+                const params = new URLSearchParams();
+                
+                if (claseSeleccionada) {
+                    params.append('clase_id', claseSeleccionada);
+                }
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar equipos');
+                }
+
+                const data = await response.json();
+                equipos = data.equipos;
+                
+                // Mostrar mensaje informativo si existe
+                if (data.mensaje) {
+                    console.log('📝 Filtros aplicados:', data.mensaje);
+                }
+                
+                mostrarEquipos(equipos);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar equipos: ' + error.message);
+            }
+        }
+
+        function mostrarEquipos(equiposList) {
+            const grid = document.getElementById('equipos-grid');
+            grid.innerHTML = '';
+
+            if (equiposList.length === 0) {
+                grid.innerHTML = '<p class="empty-state">⚔️ No hay equipos disponibles</p>';
+                return;
+            }
+
+            equiposList.forEach(equipo => {
+                const equipoCard = crearTarjetaEquipo(equipo);
+                grid.appendChild(equipoCard);
+            });
+        }
+
+        function crearTarjetaEquipo(equipo) {
+            console.log('🔍 Creando tarjeta para equipo:', {
+                nombre: equipo.nombre,
+                id: equipo.id,
+                _id: equipo._id,
+                id_length: equipo.id ? equipo.id.length : 'undefined',
+                _id_length: equipo._id ? equipo._id.length : 'undefined'
+            });
+            
+            const div = document.createElement('div');
+            div.className = 'equipo-card';
+            
+            // Determinar acciones según rol y tipo de equipo
+            let accionesHTML = '';
+            if (userRole === 'profesor') {
+                accionesHTML = `<button onclick="gestionarPuntosEquipo('${equipo.id || equipo._id}')" class="btn btn-sm btn-warning">💰 Puntos</button>`;
+            } else if (equipo.puede_unirse && equipo.espacios_disponibles > 0) {
+                accionesHTML = `<button onclick="unirseAEquipo('${equipo.id || equipo._id}')" class="btn btn-sm btn-success">➕ Unirse</button>`;
+            } else if (equipo.espacios_disponibles === 0) {
+                accionesHTML = `<span class="badge badge-warning">Equipo lleno</span>`;
+            } else {
+                accionesHTML = `<span class="badge badge-info">Ver equipo</span>`;
+            }
+            
+            // Información de clase/tipo
+            let tipoEquipoHTML = '';
+            if (equipo.tipo_equipo === 'clase' && equipo.clase_info) {
+                tipoEquipoHTML = `
+                    <div class="equipo-tipo" style="margin: 8px 0;">
+                        <span class="badge badge-primary">🏷️ ${equipo.clase_info.nombre} (${equipo.clase_info.codigo})</span>
+                    </div>
+                `;
+            } else if (equipo.tipo_equipo === 'global') {
+                tipoEquipoHTML = `
+                    <div class="equipo-tipo" style="margin: 8px 0;">
+                        <span class="badge badge-secondary">🌐 Equipo Global</span>
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `
+                <div class="equipo-header">
+                    <h4>${equipo.nombre}</h4>
+                    <span class="profesor">👨‍🏫 ${equipo.profesor_id?.nombre || 'Profesor'}</span>
+                </div>
+                ${tipoEquipoHTML}
+                <div class="equipo-stats">
+                    <div class="stat">
+                        <span class="label">👥 Miembros:</span>
+                        <span class="value">${equipo.cantidad_miembros}/4</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">🏆 Puntos:</span>
+                        <span class="value">${equipo.puntos}</span>
+                    </div>
+                </div>
+                <div class="equipo-miembros">
+                    ${equipo.miembros.slice(0, 3).map(miembro => 
+                        `<span class="miembro">${miembro.nombre}</span>`
+                    ).join('')}
+                    ${equipo.miembros.length > 3 ? `<span class="miembro-extra">+${equipo.miembros.length - 3} más</span>` : ''}
+                </div>
+                <div class="equipo-actions">
+                    ${accionesHTML}
+                </div>
+            `;
+
+            return div;
+        }
+
+        async function verificarEquipoEstudiante() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch('/api/equipos/?mi_equipo=true', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.equipos.length > 0) {
+                    equipoActual = data.equipos[0];
+                    mostrarInfoMiEquipo(equipoActual);
+                    document.getElementById('btn-salir-equipo').style.display = 'inline-block';
+                } else {
+                    document.getElementById('mi-equipo-info').innerHTML = 
+                        '<p class="no-equipo">🚫 No perteneces a ningún equipo</p>';
+                }
+
+            } catch (error) {
+                console.error('Error al verificar equipo:', error);
+            }
+        }
+
+        function mostrarInfoMiEquipo(equipo) {
+            document.getElementById('mi-equipo-info').innerHTML = `
+                <div class="mi-equipo-card">
+                    <h4>${equipo.nombre}</h4>
+                    <div class="equipo-stats-mini">
+                        <span>👥 ${equipo.cantidad_miembros}/4</span>
+                        <span>🏆 ${equipo.puntos} pts</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function mostrarCrearEquipo() {
+            document.getElementById('modal-crear-equipo').style.display = 'flex';
+        }
+
+        async function crearEquipo() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const formData = {
+                    nombre: document.getElementById('nombre-equipo').value,
+                    color_equipo: document.getElementById('color-equipo').value
+                };
+                
+                // Agregar clase_id si se seleccionó una clase
+                const claseSeleccionada = document.getElementById('clase-equipo').value;
+                if (claseSeleccionada) {
+                    formData.clase_id = claseSeleccionada;
+                }
+
+                const response = await fetch('/api/equipos/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Mensaje más informativo
+                    let mensaje = `✅ ${result.message}`;
+                    if (result.equipo.clase_info) {
+                        mensaje += ` en la clase ${result.equipo.clase_info.nombre}`;
+                    } else {
+                        mensaje += ` como equipo global`;
+                    }
+                    
+                    alert(mensaje);
+                    cerrarModal('modal-crear-equipo');
+                    
+                    // Recargar equipos
+                    await cargarEquipos();
+                    
+                    // Limpiar formulario
+                    document.getElementById('form-crear-equipo').reset();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al crear equipo');
+            }
+        }
+
+        async function unirseAEquipo(equipoId) {
+            try {
+                console.log('🔍 Frontend - Enviando equipoId:', equipoId, 'Longitud:', equipoId.length);
+                
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch(`/api/equipos/${equipoId}/unirse`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    verificarEquipoEstudiante();
+                    cargarEquipos();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al unirse al equipo');
+            }
+        }
+
+        async function salirDeEquipo() {
+            if (!equipoActual) {
+                alert('No perteneces a ningún equipo');
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro de que quieres salir del equipo "${equipoActual.nombre}"?`)) {
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch('/api/equipos/salir', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    equipoActual = null;
+                    document.getElementById('btn-salir-equipo').style.display = 'none';
+                    document.getElementById('mi-equipo-info').innerHTML = 
+                        '<p class="no-equipo">🚫 No perteneces a ningún equipo</p>';
+                    cargarEquipos();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al salir del equipo');
+            }
+        }
+
+        function gestionarPuntosEquipo(equipoId) {
+            const equipo = equipos.find(e => e.id === equipoId || e._id === equipoId);
+            if (!equipo) return;
+
+            document.getElementById('equipo-puntos-info').innerHTML = `
+                <div class="equipo-info-puntos">
+                    <h4>${equipo.nombre}</h4>
+                    <p>Puntos actuales: <strong>${equipo.puntos}</strong></p>
+                    <p>Miembros: ${equipo.cantidad_miembros}/4</p>
+                </div>
+            `;
+            
+            document.getElementById('form-puntos').dataset.equipoId = equipoId;
+            document.getElementById('modal-puntos').style.display = 'flex';
+        }
+
+        async function gestionarPuntos() {
+            try {
+                const equipoId = document.getElementById('form-puntos').dataset.equipoId;
+                const token = localStorage.getItem('classcraft_token');
+                
+                const formData = {
+                    operacion: document.getElementById('operacion-puntos').value,
+                    cantidad: parseInt(document.getElementById('cantidad-puntos').value),
+                    razon: document.getElementById('razon-puntos').value
+                };
+
+                const response = await fetch(`/api/equipos/${equipoId}/puntos`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ ${result.message}\nAnterior: ${result.puntos_anteriores} → Nuevo: ${result.puntos_actuales}`);
+                    cerrarModal('modal-puntos');
+                    cargarEquipos();
+                    document.getElementById('form-puntos').reset();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al gestionar puntos');
+            }
+        }
+
+        async function verRanking() {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                
+                // Construir URL del ranking
+                let url = '/api/equipos/ranking/';
+                const params = new URLSearchParams();
+                
+                if (claseSeleccionada) {
+                    params.append('clase_id', claseSeleccionada);
+                }
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar ranking');
+                }
+
+                const data = await response.json();
+                mostrarRanking(data);
+                document.getElementById('modal-ranking').style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar ranking: ' + error.message);
+            }
+        }
+
+        function mostrarRanking(data) {
+            const container = document.getElementById('ranking-container');
+            const ranking = data.ranking;
+            
+            if (ranking.length === 0) {
+                container.innerHTML = '<p class="empty-state">🏆 No hay equipos para rankear</p>';
+                return;
+            }
+
+            // Header con información contextual
+            let headerHTML = `
+                <div class="ranking-header-info" style="margin-bottom: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                    <h4 style="margin: 0 0 10px 0;">${data.contexto.descripcion}</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 0.9em;">
+                        <div><strong>Total equipos:</strong> ${data.estadisticas.total_equipos}</div>
+                        <div><strong>Total miembros:</strong> ${data.estadisticas.total_miembros}</div>
+                        <div><strong>Puntos totales:</strong> ${data.estadisticas.puntos_totales}</div>
+                    </div>`;
+            
+            if (data.estadisticas.equipos_con_clase > 0 && data.estadisticas.equipos_globales > 0) {
+                headerHTML += `
+                    <div style="margin-top: 10px; font-size: 0.85em; color: #718096;">
+                        🏷️ ${data.estadisticas.equipos_con_clase} equipos de clase | 
+                        🌐 ${data.estadisticas.equipos_globales} equipos globales
+                    </div>`;
+            }
+            
+            headerHTML += '</div>';
+
+            container.innerHTML = headerHTML + `
+                <div class="ranking-table">
+                    <div class="ranking-header">
+                        <span>Pos</span>
+                        <span>Equipo</span>
+                        <span>Tipo</span>
+                        <span>Puntos</span>
+                        <span>Miembros</span>
+                    </div>
+                    ${ranking.map(equipo => {
+                        const medalla = equipo.posicion === 1 ? '🥇' : 
+                                       equipo.posicion === 2 ? '🥈' : 
+                                       equipo.posicion === 3 ? '🥉' : '🏅';
+                        
+                        const tipoIcono = equipo.tipo_equipo === 'clase' ? '🏷️' : '🌐';
+                        const tipoTexto = equipo.tipo_equipo === 'clase' && equipo.clase_info ? 
+                            equipo.clase_info.codigo : 'Global';
+                        
+                        return `
+                            <div class="ranking-row">
+                                <span class="posicion">${medalla} ${equipo.posicion}</span>
+                                <span class="nombre">${equipo.nombre}</span>
+                                <span class="tipo">${tipoIcono} ${tipoTexto}</span>
+                                <span class="puntos">${equipo.puntos}</span>
+                                <span class="miembros">${equipo.cantidad_miembros}/4</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function logout() {
+            localStorage.removeItem('classcraft_token');
+            localStorage.removeItem('classcraft_user');
+            location.href = 'login.html';
+        }
+
+        // Cerrar modales al hacer click fuera
+        window.onclick = function(event) {
+            const modales = ['modal-crear-equipo', 'modal-puntos', 'modal-ranking'];
+            modales.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    cerrarModal(modalId);
+                }
+            });
+        }
+    </script>
+    
+    <style>
+        /* Estilos adicionales para equipos por clase */
+        .clase-selector-container {
+            margin-bottom: 20px;
+        }
+        
+        .form-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: white;
+            font-size: 0.9em;
+        }
+        
+        .form-help {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.8em;
+            color: #718096;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        
+        .badge-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .badge-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #63b3ed;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #f6ad55;
+            color: white;
+        }
+        
+        .equipo-tipo {
+            text-align: center;
+        }
+        
+        .miembro-extra {
+            font-style: italic;
+            color: #718096;
+            font-size: 0.85em;
+        }
+        
+        .ranking-header-info {
+            border: 1px solid #e2e8f0;
+        }
+        
+        .ranking-table .ranking-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 80px 80px 80px;
+            gap: 10px;
+            font-weight: bold;
+            padding: 10px;
+            background: #edf2f7;
+            border-radius: 4px;
+        }
+        
+        .ranking-table .ranking-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 80px 80px 80px;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .ranking-row:hover {
+            background: #f7fafc;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+    </style>
+</body>
+</html>

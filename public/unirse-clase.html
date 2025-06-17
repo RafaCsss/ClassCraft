@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Unirse a Clase</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
+                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html">⚔️ Mi Personaje</a>
+            <a href="/clases.html">🏫 Clases</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <div class="card">
+            <h2>🎓 Unirse a una Clase</h2>
+            
+            <div id="verificarPersonaje" class="alert alert-info">
+                <p>🔍 Verificando tu personaje...</p>
+            </div>
+
+            <div id="formUnirse" class="hidden">
+                <form id="unirseClaseForm">
+                    <div class="form-group">
+                        <label for="codigoClase">Código de la Clase:</label>
+                        <input type="text" id="codigoClase" name="codigoClase" required 
+                               placeholder="Ej: MATE5A, HIST3B..."
+                               style="text-transform: uppercase; font-family: monospace; font-size: 1.2em; text-align: center;"
+                               maxlength="20">
+                        <small style="color: #718096;">El profesor te proporcionará este código</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnUnirse">
+                            🎓 Unirse a la Clase
+                        </button>
+                    </div>
+                </form>
+
+                <div class="form-group" style="margin-top: 30px;">
+                    <label>💡 ¿No tienes un código?</label>
+                    <p style="color: #718096; margin-top: 10px;">
+                        Pídele a tu profesor el código de la clase. Cada clase tiene un código único que permite a los estudiantes unirse.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="misClases" class="card hidden">
+            <h3>🏫 Mis Clases Actuales</h3>
+            <div id="listaClases">
+                <div class="loading">Cargando clases...</div>
+            </div>
+        </div>
+
+        <div id="infoPersonaje" class="card hidden">
+            <h3>⚔️ Tu Personaje</h3>
+            <div id="datosPersonaje">
+                <div class="loading">Cargando datos del personaje...</div>
+            </div>
+            <p style="color: #718096; margin-top: 15px;">
+                Este es el personaje que usarás en las clases. Si quieres cambiarlo, debes crear uno nuevo.
+            </p>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Verificar autenticación y rol
+        if (!requireAuth() || currentUser.rol !== 'estudiante') {
+            showAlert('Solo los estudiantes pueden unirse a clases', 'error');
+            window.location.href = '/dashboard.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
+            
+            await verificarPersonajeYCargarDatos();
+        });
+
+        async function verificarPersonajeYCargarDatos() {
+            const verificarElement = document.getElementById('verificarPersonaje');
+            
+            try {
+                // Verificar si tiene personaje
+                const personajeData = await getMyPersonaje();
+                
+                if (!personajeData.personaje) {
+                    verificarElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h4>⚠️ Necesitas crear un personaje primero</h4>
+                            <p>Para unirte a una clase, necesitas tener un personaje creado.</p>
+                            <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Mostrar formulario y cargar datos
+                verificarElement.classList.add('hidden');
+                document.getElementById('formUnirse').classList.remove('hidden');
+                document.getElementById('misClases').classList.remove('hidden');
+                document.getElementById('infoPersonaje').classList.remove('hidden');
+
+                await cargarMisClases();
+                await cargarInfoPersonaje(personajeData);
+
+            } catch (error) {
+                verificarElement.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>⚠️ Necesitas crear un personaje primero</h4>
+                        <p>Para unirte a una clase, necesitas tener un personaje creado.</p>
+                        <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
+                    </div>
+                `;
+            }
+        }
+
+        async function cargarMisClases() {
+            const listaElement = document.getElementById('listaClases');
+            
+            try {
+                const clasesData = await getMyClases();
+                
+                if (clasesData.clases.length === 0) {
+                    listaElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <p>No estás registrado en ninguna clase aún.</p>
+                        </div>
+                    `;
+                } else {
+                    listaElement.innerHTML = clasesData.clases.map(clase => `
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="color: #4a5568; margin-bottom: 5px;">${clase.nombre}</h4>
+                                    <p style="margin: 5px 0;"><strong>Código:</strong> 
+                                       <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${clase.codigo}</span>
+                                    </p>
+                                    <p style="margin: 5px 0;"><strong>Profesor:</strong> ${clase.profesor}</p>
+                                    <p style="margin: 5px 0;"><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
+                                </div>
+                                <div>
+                                    <span style="background: #48bb78; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9em;">
+                                        ✅ Registrado
+                                    </span>
+                                </div>
+                            </div>
+                            <p style="color: #718096; margin-top: 10px;">${clase.descripcion}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                listaElement.innerHTML = `<div class="alert alert-error">Error cargando clases: ${error.message}</div>`;
+            }
+        }
+
+        async function cargarInfoPersonaje(personajeData) {
+            const datosElement = document.getElementById('datosPersonaje');
+            const p = personajeData.personaje;
+            
+            datosElement.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <p><strong>Nombre:</strong> ${p.nombre}</p>
+                        <p><strong>Clase:</strong> ${p.clase_personaje_id.nombre}</p>
+                        <p><strong>Raza:</strong> ${p.raza_id.nombre}</p>
+                    </div>
+                    <div>
+                        <p><strong>Nivel:</strong> ${p.nivel}</p>
+                        <p><strong>XP:</strong> ${p.experiencia}</p>
+                        <p><strong>Equipo:</strong> ${p.equipo_id?.nombre || 'Sin equipo'}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Auto-formatear código mientras escribe
+        document.getElementById('codigoClase').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+
+        document.getElementById('unirseClaseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnUnirse = document.getElementById('btnUnirse');
+            const codigo = document.getElementById('codigoClase').value.trim();
+            
+            if (!codigo) {
+                showAlert('Por favor ingresa un código de clase', 'error');
+                return;
+            }
+
+            btnUnirse.disabled = true;
+            btnUnirse.textContent = 'Uniéndose...';
+            
+            try {
+                const response = await fetch(`/api/clases/unirse/${codigo}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error uniéndose a la clase');
+                }
+
+                showAlert(`✅ Te has unido exitosamente a la clase "${data.clase.nombre}"!`, 'success');
+                
+                // Limpiar formulario y recargar clases
+                document.getElementById('codigoClase').value = '';
+                await cargarMisClases();
+                
+                // Redirigir al dashboard después de 2 segundos
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            } finally {
+                btnUnirse.disabled = false;
+                btnUnirse.textContent = '🎓 Unirse a la Clase';
+            }
+        });
+    </script>
+</body>
+</html>

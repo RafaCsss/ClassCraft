@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Login</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card" style="max-width: 400px; margin: 0 auto;">
+            <h2>Iniciar Sesión</h2>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">Iniciar Sesión</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <p>¿No tienes cuenta? <a href="/register.html">Regístrate aquí</a></p>
+            </div>
+            
+            <hr style="margin: 30px 0;">
+            
+            <div style="text-align: center;">
+                <h4>👤 Credenciales de Prueba</h4>
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                    <strong>Profesor:</strong><br>
+                    Email: profesor@test.com<br>
+                    Password: 123456
+                    <button type="button" class="btn btn-secondary" onclick="fillCredentials('profesor@test.com', '123456')">
+                        Usar estas credenciales
+                    </button>
+                </div>
+                
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                    <strong>Estudiante:</strong><br>
+                    Email: ana@test.com<br>
+                    Password: 123456
+                    <button type="button" class="btn btn-secondary" onclick="fillCredentials('ana@test.com', '123456')">
+                        Usar estas credenciales
+                    </button>
+                </div>
+                
+                <details style="margin-top: 15px;">
+                    <summary style="cursor: pointer; color: #667eea;">Más estudiantes de prueba</summary>
+                    <div style="background: #f7fafc; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px;">
+                        • carlos@test.com / 123456<br>
+                        • maria@test.com / 123456<br>
+                        • pedro@test.com / 123456
+                    </div>
+                </details>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/dev.html" class="btn btn-dev">🔧 Página DEV</a>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Redirigir si ya está logueado
+        if (loadToken()) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Manejar formulario de login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            try {
+                submitBtn.textContent = 'Iniciando...';
+                submitBtn.disabled = true;
+                
+                const response = await login(email, password);
+                
+                showAlert('Login exitoso! Redirigiendo...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 1000);
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+                submitBtn.textContent = 'Iniciar Sesión';
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Función para llenar credenciales de prueba
+        function fillCredentials(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+        }
+    </script>
+</body>
+</html>

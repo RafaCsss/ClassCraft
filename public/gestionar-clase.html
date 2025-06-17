@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Gestionar Clase</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
+                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html" id="navPersonaje">⚔️ Mi Personaje</a>
+            <a href="/clases.html">🏫 Clases</a>
+            <a href="/equipos.html">⚔️ Equipos</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <div id="cargandoClase" class="card">
+            <div class="loading">Cargando información de la clase...</div>
+        </div>
+
+        <div id="contenidoClase" class="hidden">
+            <!-- Header de la clase -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 id="nombreClase">📚 Cargando...</h2>
+                        <p><strong>Código:</strong> <span id="codigoClase" style="background: #667eea; color: white; padding: 4px 12px; border-radius: 4px; font-family: monospace;">...</span></p>
+                        <p id="descripcionClase" style="color: #718096;">...</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">
+                            ⬅️ Volver al Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats de la clase -->
+            <div class="card">
+                <h3>📊 Estadísticas de la Clase</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalEstudiantes">0</span>
+                        <span class="stat-label">Estudiantes</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalEquipos">0</span>
+                        <span class="stat-label">Equipos</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="estudiantesActivos">0</span>
+                        <span class="stat-label">Activos Hoy</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="promedioNivel">0</span>
+                        <span class="stat-label">Nivel Promedio</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista de equipos y estudiantes -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>👥 Organización de la Clase</h3>
+                    <div>
+                        <button class="btn btn-info" onclick="toggleVistaEquipos()" id="btnToggleVista">
+                            👥 Vista por Equipos
+                        </button>
+                        <input type="search" id="buscarEstudiante" placeholder="Buscar estudiante..." 
+                               style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; margin: 0 10px;">
+                        <button class="btn btn-primary" onclick="mostrarAccionesMasivas()">
+                            ⚡ Acciones Masivas
+                        </button>
+                    </div>
+                </div>
+
+                <div id="vistaEquipos" class="hidden">
+                    <div id="listaEquipos">
+                        <div class="loading">Cargando equipos...</div>
+                    </div>
+                </div>
+
+                <div id="vistaEstudiantes">
+                    <div id="listaEstudiantes">
+                        <div class="loading">Cargando estudiantes...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para acciones masivas -->
+            <div id="modalAccionesMasivas" class="modal hidden">
+                <div class="modal-content">
+                    <h3>⚡ Acciones Masivas</h3>
+                    
+                    <div class="form-group">
+                        <label for="tipoAccionMasiva">Tipo de acción:</label>
+                        <select id="tipoAccionMasiva">
+                            <option value="xp">Dar/Quitar XP</option>
+                            <option value="salud">Modificar Salud</option>
+                            <option value="energia">Modificar Energía</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="valorAccionMasiva">Valor:</label>
+                        <input type="number" id="valorAccionMasiva" placeholder="Ej: 10, -5">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="razonAccionMasiva">Razón:</label>
+                        <input type="text" id="razonAccionMasiva" placeholder="Ej: Participación activa">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="cerrarModalAccionesMasivas()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="ejecutarAccionMasiva()">Aplicar a Todos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let claseActual = null;
+        let estudiantesData = [];
+        let equiposData = [];
+        let vistaActual = 'estudiantes'; // 'estudiantes' o 'equipos'
+
+        if (!requireAuth() || currentUser.rol !== 'profesor') {
+            showAlert('Solo los profesores pueden gestionar clases', 'error');
+            window.location.href = '/dashboard.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
+            document.getElementById('navPersonaje').style.display = 'none';
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const claseId = urlParams.get('id');
+            
+            if (!claseId) {
+                showAlert('ID de clase no especificado', 'error');
+                window.location.href = '/dashboard.html';
+                return;
+            }
+
+            await cargarDatosClase(claseId);
+            setupBuscador();
+        });
+
+        async function cargarDatosClase(claseId) {
+            const cargandoElement = document.getElementById('cargandoClase');
+            
+            try {
+                const response = await fetch(`/api/clases/${claseId}/estudiantes`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Clase no encontrada o sin permisos');
+                }
+
+                const data = await response.json();
+                claseActual = data.clase;
+                estudiantesData = data.estudiantes;
+
+                document.getElementById('nombreClase').textContent = `📚 ${data.clase.nombre}`;
+                document.getElementById('codigoClase').textContent = data.clase.codigo;
+                document.getElementById('descripcionClase').textContent = data.clase.descripcion;
+
+                const totalEstudiantes = estudiantesData.length;
+                const equiposUnicos = new Set(estudiantesData.filter(e => e.personaje?.equipo_id).map(e => e.personaje.equipo_id)).size;
+                const estudiantesActivos = estudiantesData.filter(e => {
+                    const ultimaConexion = new Date(e.ultima_conexion);
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    return ultimaConexion >= hoy;
+                }).length;
+                const estudiantesConPersonaje = estudiantesData.filter(e => e.personaje !== null);
+                const promedioNivel = estudiantesConPersonaje.length > 0 ? 
+                    Math.round(estudiantesConPersonaje.reduce((sum, e) => sum + e.nivel, 0) / estudiantesConPersonaje.length) : 0;
+
+                document.getElementById('totalEstudiantes').textContent = totalEstudiantes;
+                document.getElementById('totalEquipos').textContent = equiposUnicos;
+                document.getElementById('estudiantesActivos').textContent = estudiantesActivos;
+                document.getElementById('promedioNivel').textContent = promedioNivel;
+
+                await cargarEquiposClase();
+                mostrarEstudiantes(estudiantesData);
+
+                cargandoElement.classList.add('hidden');
+                document.getElementById('contenidoClase').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error:', error);
+                cargandoElement.innerHTML = `
+                    <div class="alert alert-error">
+                        <h4>❌ Error cargando la clase</h4>
+                        <p>${error.message}</p>
+                        <button class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">
+                            Volver al Dashboard
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        async function cargarEquiposClase() {
+            try {
+                const response = await fetch('/api/equipos/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    equiposData = data.equipos || [];
+                    console.log('✅ Equipos cargados:', equiposData.length, equiposData);
+                } else {
+                    console.log('❌ Error respuesta equipos:', response.status);
+                    equiposData = [];
+                }
+            } catch (error) {
+                console.error('Error cargando equipos:', error);
+                equiposData = [];
+            }
+        }
+
+        function toggleVistaEquipos() {
+            const vistaEquipos = document.getElementById('vistaEquipos');
+            const vistaEstudiantes = document.getElementById('vistaEstudiantes');
+            const btnToggle = document.getElementById('btnToggleVista');
+            
+            if (vistaActual === 'estudiantes') {
+                vistaActual = 'equipos';
+                vistaEquipos.classList.remove('hidden');
+                vistaEstudiantes.classList.add('hidden');
+                btnToggle.innerHTML = '📝 Vista Individual';
+                mostrarEquipos();
+            } else {
+                vistaActual = 'estudiantes';
+                vistaEquipos.classList.add('hidden');
+                vistaEstudiantes.classList.remove('hidden');
+                btnToggle.innerHTML = '👥 Vista por Equipos';
+            }
+        }
+
+        function mostrarEquipos() {
+            const listaEquipos = document.getElementById('listaEquipos');
+            
+            console.log('🔍 DEBUG mostrarEquipos');
+            console.log('equiposData:', equiposData);
+            console.log('estudiantesData:', estudiantesData.map(e => ({ nombre: e.nombre, equipo_id: e.personaje?.equipo_id })));
+            
+            // Organizar estudiantes por equipos
+            const estudiantesPorEquipo = {};
+            const estudiantesSinEquipo = [];
+            
+            estudiantesData.forEach(estudiante => {
+                if (estudiante.personaje && estudiante.personaje.equipo_id) {
+                    const equipoId = estudiante.personaje.equipo_id;
+                    if (!estudiantesPorEquipo[equipoId]) {
+                        estudiantesPorEquipo[equipoId] = {
+                            equipo: equiposData.find(e => e._id.toString() === equipoId.toString()),
+                            miembros: []
+                        };
+                    }
+                    estudiantesPorEquipo[equipoId].miembros.push(estudiante);
+                } else {
+                    estudiantesSinEquipo.push(estudiante);
+                }
+            });
+            
+            let html = '';
+            
+            // Mostrar equipos existentes
+            Object.values(estudiantesPorEquipo).forEach(grupoEquipo => {
+                const equipo = grupoEquipo.equipo;
+                const miembros = grupoEquipo.miembros;
+                
+                const equipoNombre = equipo ? equipo.nombre : 'Equipo Desconocido';
+                const equipoPuntos = equipo ? equipo.puntos : 0;
+                const promedioNivel = miembros.length > 0 ? 
+                    Math.round(miembros.reduce((sum, m) => sum + m.nivel, 0) / miembros.length) : 0;
+                
+                html += `
+                    <div class="equipo-seccion" style="background: #e6fffa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38b2ac;">
+                        <div class="equipo-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div>
+                                <h4 style="color: #2d3748; margin: 0;">⚔️ ${equipoNombre}</h4>
+                                <p style="margin: 5px 0; color: #4a5568;">👥 ${miembros.length}/4 miembros | 🏆 ${equipoPuntos} puntos | 📊 Nivel promedio: ${promedioNivel}</p>
+                            </div>
+                            <div>
+                                ${equipo ? `<button class="btn btn-warning btn-sm" onclick="gestionarPuntosEquipo('${equipo._id}', '${equipoNombre}')">💰 Puntos</button>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="miembros-equipo" style="display: grid; gap: 10px;">
+                            ${miembros.map(miembro => {
+                                const p = miembro.personaje;
+                                const ultimaConexion = new Date(miembro.ultima_conexion);
+                                const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
+                                
+                                return `
+                                    <div class="miembro-equipo" style="background: white; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                        <div>
+                                            <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                                ${miembro.nombre}
+                                                ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                            </h5>
+                                            <p style="margin: 2px 0; font-size: 0.9em; color: #718096;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                        </div>
+                                        
+                                        <div style="font-size: 0.85em;">
+                                            <div>Nivel: ${miembro.nivel} | XP: ${miembro.experiencia}</div>
+                                            <div>❤️ ${p.salud?.actual || 0}/${p.salud?.maxima || 0} | ⚡ ${p.energia?.actual || 0}/${p.energia?.maxima || 0}</div>
+                                        </div>
+                                        
+                                        <div>
+                                            <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${miembro._id}', '${miembro.nombre}')">
+                                                ⚡ Acciones
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Mostrar estudiantes sin equipo
+            if (estudiantesSinEquipo.length > 0) {
+                html += `
+                    <div class="sin-equipo-seccion" style="background: #fef5e7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f6ad55;">
+                        <div class="sin-equipo-header" style="margin-bottom: 15px;">
+                            <h4 style="color: #2d3748; margin: 0;">🚫 Sin Equipo (${estudiantesSinEquipo.length} estudiantes)</h4>
+                            <p style="margin: 5px 0; color: #d69e2e;">Estos estudiantes pueden unirse a equipos existentes o formar nuevos equipos</p>
+                        </div>
+                        
+                        <div class="estudiantes-sin-equipo" style="display: grid; gap: 10px;">
+                            ${estudiantesSinEquipo.map(estudiante => {
+                                const p = estudiante.personaje;
+                                const ultimaConexion = new Date(estudiante.ultima_conexion);
+                                const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
+                                
+                                if (!p) {
+                                    return `
+                                        <div class="estudiante-sin-equipo" style="background: #fed7d7; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                            <div>
+                                                <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                                    ${estudiante.nombre}
+                                                    ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                                    <span style="color: #e53e3e; margin-left: 8px;">⚠️ Sin Personaje</span>
+                                                </h5>
+                                                <p style="margin: 2px 0; font-size: 0.9em; color: #e53e3e;">Debe crear personaje</p>
+                                            </div>
+                                            
+                                            <div style="font-size: 0.85em;">
+                                                <div>Nivel: ${estudiante.nivel} | XP: ${estudiante.experiencia}</div>
+                                                <div style="color: #e53e3e;">No puede unirse a equipos</div>
+                                            </div>
+                                            
+                                            <div>
+                                                <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${estudiante._id}', '${estudiante.nombre}')">
+                                                    ⚡ Dar XP
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    return `
+                                        <div class="estudiante-sin-equipo" style="background: white; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                            <div>
+                                                <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                                    ${estudiante.nombre}
+                                                    ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                                </h5>
+                                                <p style="margin: 2px 0; font-size: 0.9em; color: #718096;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                            </div>
+                                            
+                                            <div style="font-size: 0.85em;">
+                                                <div>Nivel: ${estudiante.nivel} | XP: ${estudiante.experiencia}</div>
+                                                <div>❤️ ${p.salud?.actual || 0}/${p.salud?.maxima || 0} | ⚡ ${p.energia?.actual || 0}/${p.energia?.maxima || 0}</div>
+                                            </div>
+                                            
+                                            <div>
+                                                <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${estudiante._id}', '${estudiante.nombre}')">
+                                                    ⚡ Acciones
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (html === '') {
+                html = `
+                    <div class="alert alert-info">
+                        <p>🏫 No hay equipos formados aún en esta clase.</p>
+                        <p>Los estudiantes pueden formar equipos desde la página de Equipos.</p>
+                    </div>
+                `;
+            }
+            
+            listaEquipos.innerHTML = html;
+        }
+
+        function gestionarPuntosEquipo(equipoId, equipoNombre) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>💰 Gestionar Puntos - ${equipoNombre}</h3>
+                    
+                    <div class="form-group">
+                        <label for="operacionPuntosEquipo">Operación:</label>
+                        <select id="operacionPuntosEquipo">
+                            <option value="agregar">➕ Agregar puntos</option>
+                            <option value="quitar">➖ Quitar puntos</option>
+                            <option value="establecer">🎯 Establecer puntos</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cantidadPuntosEquipo">Cantidad:</label>
+                        <input type="number" id="cantidadPuntosEquipo" min="0" placeholder="Ej: 10, 50">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="razonPuntosEquipo">Razón:</label>
+                        <input type="text" id="razonPuntosEquipo" placeholder="Ej: Trabajo en equipo excelente">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="cerrarModal(this)">Cancelar</button>
+                        <button class="btn btn-primary" onclick="ejecutarAccionEquipo('${equipoId}', this)">Aplicar</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+        }
+
+        async function ejecutarAccionEquipo(equipoId, modalElement) {
+            const operacion = document.getElementById('operacionPuntosEquipo').value;
+            const cantidad = parseInt(document.getElementById('cantidadPuntosEquipo').value);
+            const razon = document.getElementById('razonPuntosEquipo').value.trim();
+
+            if (isNaN(cantidad) || cantidad < 0) {
+                showAlert('Por favor ingresa una cantidad válida', 'error');
+                return;
+            }
+
+            if (!razon) {
+                showAlert('Por favor proporciona una razón', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/equipos/${equipoId}/puntos`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    },
+                    body: JSON.stringify({
+                        operacion,
+                        cantidad,
+                        razon
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error gestionando puntos');
+                }
+
+                showAlert(`✅ Puntos del equipo actualizados: ${data.puntos_anteriores} → ${data.puntos_actuales}`, 'success');
+                cerrarModal(modalElement);
+                
+                const claseId = claseActual.id || claseActual._id;
+                await cargarDatosClase(claseId);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function mostrarEstudiantes(estudiantes) {
+            const listaElement = document.getElementById('listaEstudiantes');
+            
+            if (estudiantes.length === 0) {
+                listaElement.innerHTML = `
+                    <div class="alert alert-info">
+                        <p>No hay estudiantes registrados en esta clase aún.</p>
+                        <p>Comparte el código <strong>${claseActual.codigo}</strong> con tus estudiantes para que se unan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listaElement.innerHTML = estudiantes.map(estudiante => {
+                const p = estudiante.personaje;
+                const ultimaConexion = new Date(estudiante.ultima_conexion);
+                const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
+                
+                // Manejar estudiantes sin personaje
+                if (!p) {
+                    return `
+                        <div class="estudiante-card" style="background: #fef5e7; padding: 20px; border-radius: 8px; margin: 15px 0; border: 2px solid #f6ad55;">
+                            <div style="display: grid; grid-template-columns: 1fr 200px; gap: 20px; align-items: center;">
+                                <div>
+                                    <h4 style="color: #4a5568; margin-bottom: 8px;">
+                                        ${estudiante.nombre}
+                                        ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                        <span style="color: #f6ad55; margin-left: 8px;">⚠️ Sin Personaje</span>
+                                    </h4>
+                                    <p style="margin: 3px 0;"><strong>Email:</strong> ${estudiante.email}</p>
+                                    <p style="margin: 3px 0; color: #d69e2e;"><strong>Estado:</strong> Necesita crear personaje</p>
+                                    <p style="margin: 3px 0;"><strong>Nivel:</strong> ${estudiante.nivel} | <strong>XP:</strong> ${estudiante.experiencia}</p>
+                                    <p style="margin-top: 8px; color: #718096; font-size: 0.85em;">
+                                        Última conexión: ${ultimaConexion.toLocaleDateString()}
+                                    </p>
+                                </div>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${estudiante._id}', '${estudiante.nombre}')">
+                                        ⚡ Dar XP
+                                    </button>
+                                    <p style="font-size: 0.8em; color: #718096; text-align: center;">El estudiante debe crear su personaje</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="estudiante-card" style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 200px; gap: 20px; align-items: center;">
+                            <div>
+                                <h4 style="color: #4a5568; margin-bottom: 8px;">
+                                    ${estudiante.nombre}
+                                    ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                </h4>
+                                <p style="margin: 3px 0;"><strong>Email:</strong> ${estudiante.email}</p>
+                                <p style="margin: 3px 0;"><strong>Personaje:</strong> ${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                <p style="margin: 3px 0;"><strong>Equipo:</strong> ${p.equipo || 'Sin equipo'}</p>
+                            </div>
+                            
+                            <div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                                    <div><strong>Nivel:</strong> ${estudiante.nivel || 1}</div>
+                                    <div><strong>XP:</strong> ${estudiante.experiencia || 0}</div>
+                                    <div><strong>Salud:</strong> ${p.salud?.actual || 0}/${p.salud?.maxima || 0}</div>
+                                    <div><strong>Energía:</strong> ${p.energia?.actual || 0}/${p.energia?.maxima || 0}</div>
+                                </div>
+                                <p style="margin-top: 8px; color: #718096; font-size: 0.85em;">
+                                    Última conexión: ${ultimaConexion.toLocaleDateString()}
+                                </p>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${estudiante._id}', '${estudiante.nombre}')">
+                                    ⚡ Acciones
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="verDetallesEstudiante('${estudiante._id}')">
+                                    👁️ Detalles
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setupBuscador() {
+            const buscador = document.getElementById('buscarEstudiante');
+            buscador.addEventListener('input', (e) => {
+                const termino = e.target.value.toLowerCase();
+                const estudiantesFiltrados = estudiantesData.filter(estudiante => 
+                    estudiante.nombre.toLowerCase().includes(termino) ||
+                    estudiante.email.toLowerCase().includes(termino) ||
+                    (estudiante.personaje && (
+                        (estudiante.personaje.clase && estudiante.personaje.clase.toLowerCase().includes(termino)) ||
+                        (estudiante.personaje.raza && estudiante.personaje.raza.toLowerCase().includes(termino))
+                    ))
+                );
+                mostrarEstudiantes(estudiantesFiltrados);
+            });
+        }
+
+        function mostrarModalAcciones(estudianteId, nombreEstudiante) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>⚡ Acciones para ${nombreEstudiante}</h3>
+                    
+                    <div class="form-group">
+                        <label for="tipoAccion">Tipo de acción:</label>
+                        <select id="tipoAccion">
+                            <option value="xp">Dar/Quitar XP</option>
+                            <option value="salud">Modificar Salud</option>
+                            <option value="energia">Modificar Energía</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="valorAccion">Valor:</label>
+                        <input type="number" id="valorAccion" placeholder="Ej: 10, -5">
+                        <small>Números positivos aumentan, negativos disminuyen</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="razonAccion">Razón:</label>
+                        <input type="text" id="razonAccion" placeholder="Ej: Participación activa, comportamiento inadecuado">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="cerrarModal(this)">Cancelar</button>
+                        <button class="btn btn-primary" onclick="ejecutarAccion('${estudianteId}', this)">Aplicar</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+        }
+
+        async function ejecutarAccion(estudianteId, modalElement) {
+            const tipo = document.getElementById('tipoAccion').value;
+            const valor = parseInt(document.getElementById('valorAccion').value);
+            const razon = document.getElementById('razonAccion').value.trim();
+
+            if (isNaN(valor) || valor === 0) {
+                showAlert('Por favor ingresa un valor válido', 'error');
+                return;
+            }
+
+            if (!razon) {
+                showAlert('Por favor proporciona una razón', 'error');
+                return;
+            }
+
+            try {
+                let endpoint, payload;
+                
+                const claseId = claseActual.id || claseActual._id;
+                
+                if (tipo === 'xp') {
+                    endpoint = `/api/clases/${claseId}/estudiante/${estudianteId}/xp`;
+                    payload = { cantidad: valor, razon };
+                } else {
+                    endpoint = `/api/clases/${claseId}/estudiante/${estudianteId}/stats`;
+                    // Construir payload según el tipo seleccionado
+                    payload = { razon };
+                    if (tipo === 'salud') {
+                        payload.salud = valor;
+                    } else if (tipo === 'energia') {
+                        payload.energia = valor;
+                    }
+                }
+
+
+
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error ejecutando acción');
+                }
+
+                showAlert(`✅ Acción ejecutada exitosamente`, 'success');
+                cerrarModal(modalElement);
+                
+                await cargarDatosClase(claseId);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function mostrarAccionesMasivas() {
+            document.getElementById('modalAccionesMasivas').classList.remove('hidden');
+            document.getElementById('modalAccionesMasivas').style.display = 'flex';
+        }
+
+        function cerrarModalAccionesMasivas() {
+            document.getElementById('modalAccionesMasivas').style.display = 'none';
+        }
+
+        async function ejecutarAccionMasiva() {
+            const tipo = document.getElementById('tipoAccionMasiva').value;
+            const valor = parseInt(document.getElementById('valorAccionMasiva').value);
+            const razon = document.getElementById('razonAccionMasiva').value.trim();
+
+            if (isNaN(valor) || valor === 0) {
+                showAlert('Por favor ingresa un valor válido', 'error');
+                return;
+            }
+
+            if (!razon) {
+                showAlert('Por favor proporciona una razón', 'error');
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro de aplicar esta acción a TODOS los estudiantes (${estudiantesData.length})?`)) {
+                return;
+            }
+
+            try {
+                // ✅ FIX: Usar claseActual.id en lugar de claseActual._id
+                const claseId = claseActual.id || claseActual._id;
+                
+                const promises = estudiantesData.map(async (estudiante) => {
+                    let endpoint, payload;
+                    
+                    if (tipo === 'xp') {
+                        endpoint = `/api/clases/${claseId}/estudiante/${estudiante._id}/xp`;
+                        payload = { cantidad: valor, razon };
+                    } else {
+                        endpoint = `/api/clases/${claseId}/estudiante/${estudiante._id}/stats`;
+                        // Construir payload según el tipo seleccionado
+                        payload = { razon };
+                        if (tipo === 'salud') {
+                            payload.salud = valor;
+                        } else if (tipo === 'energia') {
+                            payload.energia = valor;
+                        }
+                    }
+
+                    return fetch(endpoint, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                });
+
+                await Promise.all(promises);
+                
+                showAlert(`✅ Acción aplicada a ${estudiantesData.length} estudiantes`, 'success');
+                cerrarModalAccionesMasivas();
+                
+                document.getElementById('valorAccionMasiva').value = '';
+                document.getElementById('razonAccionMasiva').value = '';
+                
+                await cargarDatosClase(claseId);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error ejecutando acciones masivas: ' + error.message, 'error');
+            }
+        }
+
+        function verDetallesEstudiante(estudianteId) {
+            const estudiante = estudiantesData.find(e => e._id === estudianteId);
+            if (estudiante) {
+                const p = estudiante.personaje;
+                
+                if (!p) {
+                    alert(`Detalles de ${estudiante.nombre}:\\n\\n` +
+                        `Email: ${estudiante.email}\\n` +
+                        `Estado: Sin personaje creado\\n` +
+                        `Nivel: ${estudiante.nivel} | XP: ${estudiante.experiencia}\\n` +
+                        `Última conexión: ${new Date(estudiante.ultima_conexion).toLocaleString()}\\n\\n` +
+                        `El estudiante debe crear su personaje para participar completamente.`);
+                } else {
+                    alert(`Detalles de ${estudiante.nombre}:\\n\\n` +
+                        `Email: ${estudiante.email}\\n` +
+                        `Personaje: ${p.clase || 'N/A'} ${p.raza || ''}\\n` +
+                        `Nivel: ${estudiante.nivel} | XP: ${estudiante.experiencia}\\n` +
+                        `Salud: ${p.salud?.actual || 0}/${p.salud?.maxima || 0}\\n` +
+                        `Energía: ${p.energia?.actual || 0}/${p.energia?.maxima || 0}\\n` +
+                        `Equipo: ${p.equipo || 'Sin equipo'}\\n` +
+                        `Última conexión: ${new Date(estudiante.ultima_conexion).toLocaleString()}`);
+                }
+            }
+        }
+
+        function cerrarModal(element) {
+            const modal = element.closest('.modal');
+            if (modal) {
+                document.body.removeChild(modal);
+            }
+        }
+    </script>
+
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+        
+        .estudiante-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+    </style>
+</body>
+</html>

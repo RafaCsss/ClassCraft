@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Registro</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card" style="max-width: 400px; margin: 0 auto;">
+            <h2>Crear Cuenta</h2>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="nombre">Nombre completo:</label>
+                    <input type="text" id="nombre" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" required minlength="6">
+                    <small style="color: #718096;">Mínimo 6 caracteres</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar contraseña:</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="rol">Tipo de cuenta:</label>
+                    <select id="rol" required>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="profesor">Profesor</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">Crear Cuenta</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <p>¿Ya tienes cuenta? <a href="/login.html">Inicia sesión aquí</a></p>
+            </div>
+            
+            <hr style="margin: 30px 0;">
+            
+            <div style="background: #e6fffa; padding: 15px; border-radius: 8px; border: 1px solid #4fd1c7;">
+                <h4 style="color: #234e52; margin-bottom: 10px;">ℹ️ Información</h4>
+                <ul style="color: #234e52; font-size: 14px; margin-left: 20px;">
+                    <li><strong>Estudiantes:</strong> Pueden crear personajes, unirse a clases, usar habilidades</li>
+                    <li><strong>Profesores:</strong> Pueden crear clases, gestionar estudiantes, dar/quitar XP</li>
+                    <li>Ya existen usuarios de prueba si prefieres usar esos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Redirigir si ya está logueado
+        if (loadToken()) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Manejar formulario de registro
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('nombre').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const rol = document.getElementById('rol').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            // Validaciones
+            if (password !== confirmPassword) {
+                showAlert('Las contraseñas no coinciden', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showAlert('La contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+            
+            if (!nombre || !email) {
+                showAlert('Todos los campos son requeridos', 'error');
+                return;
+            }
+            
+            try {
+                submitBtn.textContent = 'Creando cuenta...';
+                submitBtn.disabled = true;
+                
+                const response = await register(nombre, email, password, rol);
+                
+                showAlert('Cuenta creada exitosamente! Redirigiendo...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 1500);
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+                submitBtn.textContent = 'Crear Cuenta';
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Validación en tiempo real de confirmación de contraseña
+        document.getElementById('confirmPassword').addEventListener('input', (e) => {
+            const password = document.getElementById('password').value;
+            const confirmPassword = e.target.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                e.target.style.borderColor = '#f56565';
+            } else {
+                e.target.style.borderColor = '#e2e8f0';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Página DEV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🔧 <span>DEV</span> Panel</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/login.html">🔑 Login</a>
+            <a href="/register.html">📝 Register</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <div class="dev-warning">
+            ⚠️ CUIDADO: Esta página es solo para desarrollo. Las acciones aquí pueden borrar datos permanentemente.
+        </div>
+
+        <div class="card dev-section">
+            <h2>🗄️ Base de Datos</h2>
+            
+            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: white; margin-bottom: 15px;">📊 Estado Actual</h4>
+                <div id="dbStats">
+                    <div class="loading" style="color: white;">Cargando stats...</div>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="loadDbStats()" style="margin-top: 15px;">
+                    🔄 Actualizar Stats
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <button class="btn btn-dev btn-full" onclick="resetDatabase()">
+                    🔄 Reset Completo (Seeds)
+                </button>
+                
+                <button class="btn btn-danger btn-full" onclick="clearAllData()">
+                    🗑️ Borrar TODO
+                </button>
+                
+                <button class="btn btn-dev btn-full" onclick="createTestUsers()">
+                    👥 Crear Usuarios Test
+                </button>
+                
+                <button class="btn btn-dev btn-full" onclick="clearTokens()">
+                    🧹 Limpiar Tokens
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🧪 Testing Rápido</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                <button class="btn btn-secondary" onclick="testLogin()">
+                    🔑 Test Login
+                </button>
+                
+                <button class="btn btn-secondary" onclick="testPersonaje()">
+                    ⚔️ Test Personaje
+                </button>
+                
+                <button class="btn btn-secondary" onclick="testClases()">
+                    🏫 Test Clases
+                </button>
+                
+                <button class="btn btn-secondary" onclick="testHabilidades()">
+                    🔮 Test Habilidades
+                </button>
+            </div>
+
+            <div id="testResults" style="margin-top: 20px;">
+                <!-- Resultados de tests aparecerán aquí -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📋 Datos de Desarrollo</h2>
+            
+            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                <h4>👤 Credenciales de Prueba</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                    <div>
+                        <strong>Profesor:</strong><br>
+                        Email: profesor@test.com<br>
+                        Password: 123456
+                    </div>
+                    <div>
+                        <strong>Estudiantes:</strong><br>
+                        ana@test.com / 123456<br>
+                        carlos@test.com / 123456<br>
+                        maria@test.com / 123456<br>
+                        pedro@test.com / 123456
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: #e6fffa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h4>🔗 URLs Importantes</h4>
+                <ul style="margin-left: 20px;">
+                    <li><a href="http://localhost:3000" target="_blank">API Base</a></li>
+                    <li><a href="http://localhost:3000/api/test" target="_blank">Test Modelos</a></li>
+                    <li><a href="http://localhost:3000/api/setup" target="_blank">Setup Seeds</a></li>
+                    <li><a href="/login.html">Login Frontend</a></li>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔍 API Explorer</h2>
+            
+            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                <h4>Endpoints Disponibles:</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-top: 10px; font-family: monospace; font-size: 12px;">
+                    <div>
+                        <strong>Auth:</strong><br>
+                        POST /api/auth/register<br>
+                        POST /api/auth/login<br>
+                        GET /api/auth/profile
+                    </div>
+                    <div>
+                        <strong>Personajes:</strong><br>
+                        GET /api/personajes/mi-personaje<br>
+                        POST /api/personajes/crear<br>
+                        POST /api/personajes/usar-habilidad
+                    </div>
+                    <div>
+                        <strong>Clases:</strong><br>
+                        POST /api/clases/crear<br>
+                        POST /api/clases/unirse/:codigo<br>
+                        GET /api/clases/mis-clases
+                    </div>
+                    <div>
+                        <strong>Datos:</strong><br>
+                        GET /api/clases-personaje<br>
+                        GET /api/razas<br>
+                        GET /api/habilidades
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Cargar stats de la BD al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDbStats();
+        });
+
+        // Cargar estadísticas de la base de datos
+        async function loadDbStats() {
+            try {
+                const stats = await getDbStats();
+                const dbStatsElement = document.getElementById('dbStats');
+                
+                dbStatsElement.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                        <div style="color: white; text-align: center;">
+                            <div style="font-size: 1.5em; font-weight: bold;">${stats.database_stats.usuarios}</div>
+                            <div style="font-size: 0.9em;">Usuarios</div>
+                        </div>
+                        <div style="color: white; text-align: center;">
+                            <div style="font-size: 1.5em; font-weight: bold;">${stats.database_stats.personajes}</div>
+                            <div style="font-size: 0.9em;">Personajes</div>
+                        </div>
+                        <div style="color: white; text-align: center;">
+                            <div style="font-size: 1.5em; font-weight: bold;">${stats.database_stats.clases}</div>
+                            <div style="font-size: 0.9em;">Clases</div>
+                        </div>
+                        <div style="color: white; text-align: center;">
+                            <div style="font-size: 1.5em; font-weight: bold;">${stats.database_stats.habilidades}</div>
+                            <div style="font-size: 0.9em;">Habilidades</div>
+                        </div>
+                    </div>
+                    <div style="color: white; text-align: center; margin-top: 15px;">
+                        <strong>MongoDB Status:</strong> ${stats.mongodb_status}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('dbStats').innerHTML = `
+                    <div style="color: #ff6b6b; text-align: center;">
+                        Error cargando stats: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Reset completo de la base de datos
+        async function resetDatabase() {
+            if (!confirm('¿Estás seguro? Esto recreará todos los datos con los seeds originales.')) {
+                return;
+            }
+            
+            try {
+                showAlert('Reseteando base de datos...', 'info');
+                const response = await resetDatabase();
+                showAlert('Base de datos reseteada exitosamente!', 'success');
+                await loadDbStats();
+                
+                // Limpiar tokens locales
+                clearAuth();
+                
+            } catch (error) {
+                showAlert('Error reseteando BD: ' + error.message, 'error');
+            }
+        }
+
+        // Borrar TODOS los datos
+        async function clearAllData() {
+            if (!confirm('⚠️ PELIGRO: Esto borrará TODOS los datos sin posibilidad de recuperación. ¿Continuar?')) {
+                return;
+            }
+            
+            if (!confirm('¿Estás absolutamente seguro? Esta acción es IRREVERSIBLE.')) {
+                return;
+            }
+            
+            try {
+                showAlert('Borrando todos los datos...', 'info');
+                
+                // Llamar a un endpoint especial para borrar todo
+                await apiRequest('/dev/clear-all', {
+                    method: 'POST'
+                });
+                
+                showAlert('Todos los datos han sido borrados!', 'success');
+                await loadDbStats();
+                
+                // Limpiar tokens locales
+                clearAuth();
+                
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Crear usuarios de prueba rápidos
+        async function createTestUsers() {
+            try {
+                showAlert('Creando usuarios de prueba...', 'info');
+                
+                const testUsers = [
+                    { nombre: 'Test Student 1', email: 'test1@example.com', password: '123456', rol: 'estudiante' },
+                    { nombre: 'Test Student 2', email: 'test2@example.com', password: '123456', rol: 'estudiante' },
+                    { nombre: 'Test Professor', email: 'prof@example.com', password: '123456', rol: 'profesor' }
+                ];
+                
+                for (const user of testUsers) {
+                    try {
+                        await register(user.nombre, user.email, user.password, user.rol);
+                    } catch (error) {
+                        // Ignorar si el usuario ya existe
+                    }
+                }
+                
+                showAlert('Usuarios de prueba creados!', 'success');
+                await loadDbStats();
+                
+            } catch (error) {
+                showAlert('Error creando usuarios: ' + error.message, 'error');
+            }
+        }
+
+        // Limpiar tokens del localStorage
+        function clearTokens() {
+            clearAuth();
+            showAlert('Tokens limpiados del localStorage', 'success');
+        }
+
+        // TESTS RÁPIDOS
+        async function testLogin() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="loading">Ejecutando test de login...</div>';
+            
+            try {
+                // Test login con credenciales válidas
+                const response = await login('profesor@test.com', '123456');
+                
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>✅ Test Login EXITOSO</h4>
+                        <p><strong>Usuario:</strong> ${response.usuario.nombre}</p>
+                        <p><strong>Rol:</strong> ${response.usuario.rol}</p>
+                        <p><strong>Token generado:</strong> ${response.token ? 'Sí' : 'No'}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <h4>❌ Test Login FALLÓ</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testPersonaje() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="loading">Ejecutando test de personaje...</div>';
+            
+            try {
+                // Asegurar que estamos logueados
+                if (!authToken) {
+                    await login('ana@test.com', '123456');
+                }
+                
+                const personajeData = await getMyPersonaje();
+                
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>✅ Test Personaje EXITOSO</h4>
+                        <p><strong>Personaje:</strong> ${personajeData.personaje.clase_personaje_id.nombre} ${personajeData.personaje.raza_id.nombre}</p>
+                        <p><strong>Nivel:</strong> ${personajeData.personaje.nivel}</p>
+                        <p><strong>Salud:</strong> ${personajeData.personaje.salud_actual}/${personajeData.personaje.salud_maxima}</p>
+                        <p><strong>Habilidades disponibles:</strong> ${personajeData.habilidades_disponibles.length}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <h4>❌ Test Personaje FALLÓ</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testClases() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="loading">Ejecutando test de clases...</div>';
+            
+            try {
+                // Test como profesor
+                await login('profesor@test.com', '123456');
+                const clasesData = await getMyClases();
+                
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>✅ Test Clases EXITOSO</h4>
+                        <p><strong>Clases del profesor:</strong> ${clasesData.clases.length}</p>
+                        ${clasesData.clases.map(clase => `
+                            <p>• ${clase.nombre} (${clase.codigo}) - ${clase.estudiantes_count} estudiantes</p>
+                        `).join('')}
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <h4>❌ Test Clases FALLÓ</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testHabilidades() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="loading">Ejecutando test de habilidades...</div>';
+            
+            try {
+                const habilidades = await getHabilidades();
+                
+                const generales = habilidades.filter(h => h.es_general);
+                const especificas = habilidades.filter(h => !h.es_general);
+                
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>✅ Test Habilidades EXITOSO</h4>
+                        <p><strong>Habilidades generales:</strong> ${generales.length}</p>
+                        <p><strong>Habilidades específicas:</strong> ${especificas.length}</p>
+                        <p><strong>Total:</strong> ${habilidades.length}</p>
+                        <details style="margin-top: 10px;">
+                            <summary>Ver lista completa</summary>
+                            <ul style="margin-top: 10px;">
+                                ${habilidades.map(h => `
+                                    <li>${h.nombre} (${h.es_general ? 'General' : h.clases_permitidas.join(', ')}) - ${h.costo_energia} energía</li>
+                                `).join('')}
+                            </ul>
+                        </details>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <h4>❌ Test Habilidades FALLÓ</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

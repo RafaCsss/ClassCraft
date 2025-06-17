@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang=\"es\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Inventario - ClassCraft</title>
+    <link href=\"css/style.css\" rel=\"stylesheet\">
+</head>
+<body>
+    <div class=\"container\">
+        <header class=\"header\">
+            <h1>Mi Inventario</h1>
+            <div class=\"header-actions\">
+                <button onclick=\"location.href='dashboard.html'\" class=\"btn btn-secondary\">← Dashboard</button>
+                <button onclick=\"logout()\" class=\"btn btn-danger\">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <div class=\"inventario-container\">
+            <!-- Info del usuario -->
+            <div class=\"user-info card\">
+                <h3 id=\"usuario-nombre\">Cargando...</h3>
+                <div class=\"stats\">
+                    <div class=\"stat\">
+                        <span class=\"label\">Monedas:</span>
+                        <span id=\"monedas\" class=\"value\">0</span>
+                    </div>
+                    <div class=\"stat\">
+                        <span class=\"label\">Espacio:</span>
+                        <span id=\"espacio\" class=\"value\">0/20</span>
+                    </div>
+                    <div class=\"stat\">
+                        <span class=\"label\">Valor Total:</span>
+                        <span id=\"valor-total\" class=\"value\">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class=\"filtros card\">
+                <h4>Filtros</h4>
+                <div class=\"filtros-row\">
+                    <select id=\"filtro-tipo\">
+                        <option value=\"\">Todos los tipos</option>
+                        <option value=\"pocion\">Pociones</option>
+                        <option value=\"pergamino\">Pergaminos</option>
+                        <option value=\"amuleto\">Amuletos</option>
+                        <option value=\"recurso\">Recursos</option>
+                    </select>
+                    <select id=\"filtro-rareza\">
+                        <option value=\"\">Todas las rarezas</option>
+                        <option value=\"comun\">Común</option>
+                        <option value=\"raro\">Raro</option>
+                        <option value=\"epico\">Épico</option>
+                        <option value=\"legendario\">Legendario</option>
+                    </select>
+                    <button onclick=\"aplicarFiltros()\" class=\"btn btn-primary\">Filtrar</button>
+                </div>
+            </div>
+
+            <!-- Grid de items -->
+            <div class=\"items-container\">
+                <h4>Mis Items</h4>
+                <div id=\"items-grid\" class=\"items-grid\">
+                    <!-- Items se cargan aquí -->
+                </div>
+            </div>
+
+            <!-- Estadísticas por tipo -->
+            <div class=\"stats-container card\">
+                <h4>Estadísticas</h4>
+                <div id=\"stats-tipos\" class=\"stats-grid\">
+                    <!-- Stats se cargan aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para usar item -->
+        <div id=\"modal-usar-item\" class=\"modal\" style=\"display: none;\">
+            <div class=\"modal-content\">
+                <h3>Usar Item</h3>
+                <div id=\"item-detalle\"></div>
+                <div class=\"modal-actions\">
+                    <label for=\"cantidad-usar\">Cantidad:</label>
+                    <input type=\"number\" id=\"cantidad-usar\" min=\"1\" value=\"1\">
+                    <button onclick=\"confirmarUsoItem()\" class=\"btn btn-success\">Usar</button>
+                    <button onclick=\"cerrarModal()\" class=\"btn btn-secondary\">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inventarioActual = null;
+        let itemSeleccionado = null;
+
+        // Cargar inventario al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            verificarAuth();
+            cargarInventario();
+        });
+
+        function verificarAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                location.href = 'login.html';
+                return;
+            }
+        }
+
+        async function cargarInventario() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/inventarios/mi-inventario', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar inventario');
+                }
+
+                const data = await response.json();
+                inventarioActual = data;
+                mostrarInventario(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar inventario: ' + error.message);
+            }
+        }
+
+        function mostrarInventario(data) {
+            const { inventario, estadisticas } = data;
+            
+            // Mostrar info del usuario
+            document.getElementById('monedas').textContent = inventario.monedas;
+            document.getElementById('espacio').textContent = 
+                `${estadisticas.capacidad_usada}/${estadisticas.capacidad_total}`;
+            document.getElementById('valor-total').textContent = estadisticas.valor_total;
+
+            // Mostrar items
+            const itemsGrid = document.getElementById('items-grid');
+            itemsGrid.innerHTML = '';
+
+            if (inventario.items.length === 0) {
+                itemsGrid.innerHTML = '<p class=\"empty-state\">Inventario vacío</p>';
+                return;
+            }
+
+            inventario.items.forEach(item => {
+                const itemElement = crearElementoItem(item);
+                itemsGrid.appendChild(itemElement);
+            });
+
+            // Mostrar estadísticas por tipo
+            mostrarEstadisticas(estadisticas);
+        }
+
+        function crearElementoItem(item) {
+            const rareza = item.item_id.rareza;
+            const div = document.createElement('div');
+            div.className = `item-card rareza-${rareza}`;
+            div.innerHTML = `
+                <div class=\"item-header\">
+                    <img src=\"/images/items/${item.item_id.icono}\" alt=\"${item.item_id.nombre}\" 
+                         onerror=\"this.src='/images/default-item.png'\">
+                    <span class=\"cantidad\">x${item.cantidad}</span>
+                </div>
+                <h5>${item.item_id.nombre}</h5>
+                <p class=\"descripcion\">${item.item_id.descripcion}</p>
+                <div class=\"item-info\">
+                    <span class=\"tipo\">${item.item_id.tipo}</span>
+                    <span class=\"rareza rareza-${rareza}\">${rareza}</span>
+                </div>
+                <div class=\"item-efectos\">
+                    ${item.item_id.efectos.map(efecto => 
+                        `<small>+${efecto.valor} ${efecto.tipo}</small>`
+                    ).join('')}
+                </div>
+                <div class=\"item-actions\">
+                    <button onclick=\"abrirModalUsar('${item.item_id._id}', ${item.cantidad})\" 
+                            class=\"btn btn-sm btn-success\">Usar</button>
+                    <span class=\"valor\">${item.item_id.valor} monedas</span>
+                </div>
+            `;
+            return div;
+        }
+
+        function mostrarEstadisticas(stats) {
+            const statsContainer = document.getElementById('stats-tipos');
+            statsContainer.innerHTML = '';
+
+            // Stats por tipo
+            Object.entries(stats.items_por_tipo).forEach(([tipo, cantidad]) => {
+                const statElement = document.createElement('div');
+                statElement.className = 'stat-item';
+                statElement.innerHTML = `
+                    <span class=\"stat-label\">${tipo}:</span>
+                    <span class=\"stat-value\">${cantidad}</span>
+                `;
+                statsContainer.appendChild(statElement);
+            });
+
+            // Stats por rareza
+            Object.entries(stats.items_por_rareza).forEach(([rareza, cantidad]) => {
+                const statElement = document.createElement('div');
+                statElement.className = 'stat-item';
+                statElement.innerHTML = `
+                    <span class=\"stat-label rareza-${rareza}\">${rareza}:</span>
+                    <span class=\"stat-value\">${cantidad}</span>
+                `;
+                statsContainer.appendChild(statElement);
+            });
+        }
+
+        function abrirModalUsar(itemId, cantidadDisponible) {
+            const item = inventarioActual.inventario.items.find(i => i.item_id._id === itemId);
+            if (!item) return;
+
+            itemSeleccionado = item;
+            document.getElementById('cantidad-usar').max = cantidadDisponible;
+            document.getElementById('cantidad-usar').value = 1;
+            
+            const detalle = document.getElementById('item-detalle');
+            detalle.innerHTML = `
+                <div class=\"item-preview\">
+                    <img src=\"/images/items/${item.item_id.icono}\" alt=\"${item.item_id.nombre}\"
+                         onerror=\"this.src='/images/default-item.png'\">
+                    <div>
+                        <h4>${item.item_id.nombre}</h4>
+                        <p>${item.item_id.descripcion}</p>
+                        <p><strong>Disponible:</strong> ${cantidadDisponible}</p>
+                        <div class=\"efectos\">
+                            ${item.item_id.efectos.map(efecto => 
+                                `<span class=\"efecto\">+${efecto.valor} ${efecto.tipo}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('modal-usar-item').style.display = 'flex';
+        }
+
+        async function confirmarUsoItem() {
+            if (!itemSeleccionado) return;
+
+            const cantidad = parseInt(document.getElementById('cantidad-usar').value);
+            if (cantidad <= 0) {
+                alert('Cantidad inválida');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/inventarios/usar-item', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        item_id: itemSeleccionado.item_id._id,
+                        cantidad: cantidad
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message);
+                    cerrarModal();
+                    cargarInventario(); // Recargar inventario
+                    
+                    // Mostrar efectos aplicados
+                    if (result.efectos_aplicados && result.efectos_aplicados.length > 0) {
+                        const efectos = result.efectos_aplicados
+                            .map(e => `+${e.valor} ${e.tipo}`)
+                            .join(', ');
+                        alert(`Efectos aplicados: ${efectos}`);
+                    }
+                } else {
+                    alert('Error: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al usar item');
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-usar-item').style.display = 'none';
+            itemSeleccionado = null;
+        }
+
+        function aplicarFiltros() {
+            // Por ahora solo mostramos todos los items
+            // Se puede implementar filtrado del lado cliente
+            cargarInventario();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            location.href = 'login.html';
+        }
+
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-usar-item');
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        }
+    </script>
+</body>
+</html>

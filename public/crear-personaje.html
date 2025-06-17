@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Crear Personaje</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html">⚔️ Mi Personaje</a>
+            <a href="/clases.html">🏫 Clases</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <div class="card">
+            <h2>⚔️ Crear Mi Personaje</h2>
+            
+            <div id="personajeExistente" class="hidden">
+                <div class="alert alert-info">
+                    Ya tienes un personaje creado. <a href="/dashboard.html">Ver en dashboard</a>
+                </div>
+            </div>
+
+            <form id="createPersonajeForm" style="max-width: 600px; margin: 0 auto;">
+                <div class="form-group">
+                    <label for="clasePersonaje">Clase de Personaje:</label>
+                    <select id="clasePersonaje" required>
+                        <option value="">Selecciona una clase...</option>
+                    </select>
+                    <div id="claseInfo" style="margin-top: 10px; padding: 10px; background: #f7fafc; border-radius: 8px; display: none;">
+                        <div id="claseDescripcion"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="raza">Raza:</label>
+                    <select id="raza" required>
+                        <option value="">Selecciona una raza...</option>
+                    </select>
+                    <div id="razaInfo" style="margin-top: 10px; padding: 10px; background: #f7fafc; border-radius: 8px; display: none;">
+                        <div id="razaDescripcion"></div>
+                    </div>
+                </div>
+
+                <div id="statsPreview" style="margin: 20px 0; padding: 20px; background: #e6fffa; border-radius: 8px; display: none;">
+                    <h4 style="color: #234e52; margin-bottom: 15px;">📊 Stats Calculadas</h4>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value" id="previewSalud">-</span>
+                            <span class="stat-label">Salud Inicial</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="previewEnergia">-</span>
+                            <span class="stat-label">Energía Inicial</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Crear Personaje</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>ℹ️ Información de Clases</h2>
+            <div id="clasesInfo">
+                <div class="loading">Cargando información...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🧬 Información de Razas</h2>
+            <div id="razasInfo">
+                <div class="loading">Cargando información...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let clasesData = [];
+        let razasData = [];
+
+        // Verificar autenticación y que sea estudiante
+        if (!requireAuth()) {
+            // requireAuth ya redirige si no está autenticado
+        }
+
+        if (currentUser.rol !== 'estudiante') {
+            showAlert('Solo los estudiantes pueden crear personajes', 'error');
+            setTimeout(() => {
+                window.location.href = '/dashboard.html';
+            }, 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadData();
+            await checkExistingPersonaje();
+        });
+
+        // Verificar si ya tiene personaje
+        async function checkExistingPersonaje() {
+            try {
+                const personajeData = await getMyPersonaje();
+                if (personajeData.personaje) {
+                    document.getElementById('personajeExistente').classList.remove('hidden');
+                    document.getElementById('createPersonajeForm').style.display = 'none';
+                }
+            } catch (error) {
+                // No tiene personaje, puede crear uno
+            }
+        }
+
+        // Cargar datos de clases y razas
+        async function loadData() {
+            try {
+                // Cargar clases de personaje
+                clasesData = await getClasesPersonaje();
+                const claseSelect = document.getElementById('clasePersonaje');
+                
+                clasesData.forEach(clase => {
+                    const option = document.createElement('option');
+                    option.value = clase._id;
+                    option.textContent = clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1);
+                    claseSelect.appendChild(option);
+                });
+
+                // Cargar razas
+                razasData = await getRazas();
+                const razaSelect = document.getElementById('raza');
+                
+                razasData.forEach(raza => {
+                    const option = document.createElement('option');
+                    option.value = raza._id;
+                    option.textContent = raza.nombre.charAt(0).toUpperCase() + raza.nombre.slice(1);
+                    razaSelect.appendChild(option);
+                });
+
+                // Mostrar información de clases
+                const clasesInfoElement = document.getElementById('clasesInfo');
+                clasesInfoElement.innerHTML = clasesData.map(clase => `
+                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="color: #4a5568;">⚔️ ${clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)}</h4>
+                        <p style="color: #718096; margin: 5px 0;">${clase.descripcion}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <small><strong>Salud inicial:</strong> ${clase.stats_base.salud_inicial}</small>
+                            <small><strong>Energía inicial:</strong> ${clase.stats_base.energia_inicial}</small>
+                            <small><strong>Salud por nivel:</strong> +${clase.stats_base.salud_por_nivel}</small>
+                            <small><strong>Energía por nivel:</strong> +${clase.stats_base.energia_por_nivel}</small>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Mostrar información de razas
+                const razasInfoElement = document.getElementById('razasInfo');
+                razasInfoElement.innerHTML = razasData.map(raza => `
+                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="color: #4a5568;">🧬 ${raza.nombre.charAt(0).toUpperCase() + raza.nombre.slice(1)}</h4>
+                        <p style="color: #718096; margin: 5px 0;">${raza.descripcion}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <small><strong>Bono salud:</strong> +${raza.bono_salud}</small>
+                            <small><strong>Bono energía:</strong> +${raza.bono_energia}</small>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                showAlert('Error cargando datos: ' + error.message, 'error');
+            }
+        }
+
+        // Event listeners para mostrar información
+        document.getElementById('clasePersonaje').addEventListener('change', (e) => {
+            const claseId = e.target.value;
+            const claseInfo = document.getElementById('claseInfo');
+            const claseDescripcion = document.getElementById('claseDescripcion');
+            
+            if (claseId) {
+                const clase = clasesData.find(c => c._id === claseId);
+                claseDescripcion.innerHTML = `
+                    <h5>${clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)}</h5>
+                    <p>${clase.descripcion}</p>
+                    <small><strong>Stats base:</strong> ${clase.stats_base.salud_inicial} HP, ${clase.stats_base.energia_inicial} MP</small>
+                `;
+                claseInfo.style.display = 'block';
+            } else {
+                claseInfo.style.display = 'none';
+            }
+            
+            updateStatsPreview();
+        });
+
+        document.getElementById('raza').addEventListener('change', (e) => {
+            const razaId = e.target.value;
+            const razaInfo = document.getElementById('razaInfo');
+            const razaDescripcion = document.getElementById('razaDescripcion');
+            
+            if (razaId) {
+                const raza = razasData.find(r => r._id === razaId);
+                razaDescripcion.innerHTML = `
+                    <h5>${raza.nombre.charAt(0).toUpperCase() + raza.nombre.slice(1)}</h5>
+                    <p>${raza.descripcion}</p>
+                    <small><strong>Bonos:</strong> +${raza.bono_salud} HP, +${raza.bono_energia} MP</small>
+                `;
+                razaInfo.style.display = 'block';
+            } else {
+                razaInfo.style.display = 'none';
+            }
+            
+            updateStatsPreview();
+        });
+
+        // Actualizar preview de stats
+        function updateStatsPreview() {
+            const claseId = document.getElementById('clasePersonaje').value;
+            const razaId = document.getElementById('raza').value;
+            const statsPreview = document.getElementById('statsPreview');
+            
+            if (claseId && razaId) {
+                const clase = clasesData.find(c => c._id === claseId);
+                const raza = razasData.find(r => r._id === razaId);
+                
+                const saludTotal = clase.stats_base.salud_inicial + clase.bonificaciones.salud + raza.bono_salud;
+                const energiaTotal = clase.stats_base.energia_inicial + clase.bonificaciones.energia + raza.bono_energia;
+                
+                document.getElementById('previewSalud').textContent = saludTotal;
+                document.getElementById('previewEnergia').textContent = energiaTotal;
+                
+                statsPreview.style.display = 'block';
+            } else {
+                statsPreview.style.display = 'none';
+            }
+        }
+
+        // Manejar formulario
+        document.getElementById('createPersonajeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const clasePersonajeId = document.getElementById('clasePersonaje').value;
+            const razaId = document.getElementById('raza').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            if (!clasePersonajeId || !razaId) {
+                showAlert('Debes seleccionar una clase y una raza', 'error');
+                return;
+            }
+            
+            try {
+                submitBtn.textContent = 'Creando personaje...';
+                submitBtn.disabled = true;
+                
+                const response = await createPersonaje(clasePersonajeId, razaId);
+                
+                showAlert('¡Personaje creado exitosamente!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 2000);
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+                submitBtn.textContent = 'Crear Personaje';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

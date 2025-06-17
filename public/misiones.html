@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misiones - ClassCraft</title>
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Misiones</h1>
+            <div class="header-actions">
+                <button onclick="location.href='dashboard.html'" class="btn btn-secondary">← Dashboard</button>
+                <button onclick="logout()" class="btn btn-danger">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <div class="misiones-container">
+            <!-- Panel del Profesor -->
+            <div id="panel-profesor" class="card" style="display: none;">
+                <h3>Panel del Profesor</h3>
+                <div class="panel-actions">
+                    <button onclick="mostrarCrearMision()" class="btn btn-success">+ Crear Misión</button>
+                    <select id="filtro-clase-profesor" onchange="cargarMisionesProfesor()">
+                        <option value="">Seleccionar clase...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Panel del Estudiante -->
+            <div id="panel-estudiante" class="card" style="display: none;">
+                <h3>Mis Misiones</h3>
+                <div class="filtros-estudiante">
+                    <select id="filtro-estado">
+                        <option value="">Todas</option>
+                        <option value="activa">Activas</option>
+                        <option value="completada">Completadas</option>
+                    </select>
+                    <button onclick="aplicarFiltroEstudiante()" class="btn btn-primary">Filtrar</button>
+                </div>
+            </div>
+
+            <!-- Grid de misiones -->
+            <div id="misiones-grid" class="misiones-grid">
+                <!-- Misiones se cargan aquí -->
+            </div>
+        </div>
+
+        <!-- Modal crear misión -->
+        <div id="modal-crear-mision" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Crear Nueva Misión</h3>
+                <form id="form-crear-mision">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombre-mision">Nombre:</label>
+                            <input type="text" id="nombre-mision" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clase-mision">Clase:</label>
+                            <select id="clase-mision" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="descripcion-mision">Descripción:</label>
+                        <textarea id="descripcion-mision" required rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipo-mision">Tipo:</label>
+                            <select id="tipo-mision" required>
+                                <option value="tarea">Tarea</option>
+                                <option value="proyecto">Proyecto</option>
+                                <option value="participacion">Participación</option>
+                                <option value="evento">Evento</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dificultad-mision">Dificultad:</label>
+                            <select id="dificultad-mision" required>
+                                <option value="facil">Fácil</option>
+                                <option value="normal">Normal</option>
+                                <option value="dificil">Difícil</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="xp-recompensa">XP Recompensa:</label>
+                            <input type="number" id="xp-recompensa" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fecha-limite">Fecha Límite:</label>
+                            <input type="datetime-local" id="fecha-limite" required>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-success">Crear Misión</button>
+                        <button type="button" onclick="cerrarModal('modal-crear-mision')" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal progreso -->
+        <div id="modal-progreso" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Actualizar Progreso</h3>
+                <div id="mision-info"></div>
+                <form id="form-progreso">
+                    <div class="form-group">
+                        <label for="progreso-actual">Progreso Actual:</label>
+                        <div class="progreso-input">
+                            <input type="range" id="progreso-actual" min="0" max="100" oninput="updateProgressValue()">
+                            <span id="progreso-value">0%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="notas-progreso">Notas (opcional):</label>
+                        <textarea id="notas-progreso" rows="2" placeholder="Describe tu progreso..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-success">Actualizar Progreso</button>
+                        <button type="button" onclick="cerrarModal('modal-progreso')" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userRole = null;
+        let misiones = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            verificarAuth();
+            inicializarPagina();
+        });
+
+        function verificarAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (!token) {
+                location.href = 'login.html';
+                return;
+            }
+            
+            userRole = user.rol;
+        }
+
+        async function inicializarPagina() {
+            if (userRole === 'profesor') {
+                document.getElementById('panel-profesor').style.display = 'block';
+                await cargarClasesProfesor();
+            } else {
+                document.getElementById('panel-estudiante').style.display = 'block';
+                await cargarMisionesEstudiante();
+            }
+
+            configurarEventos();
+        }
+
+        function configurarEventos() {
+            document.getElementById('form-crear-mision').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await crearMision();
+            });
+
+            document.getElementById('form-progreso').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await actualizarProgreso();
+            });
+        }
+
+        async function cargarClasesProfesor() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/clases/mis-clases', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                const clases = data.clases;
+                
+                const selectProfesor = document.getElementById('filtro-clase-profesor');
+                const selectMision = document.getElementById('clase-mision');
+                
+                // Limpiar selects
+                selectProfesor.innerHTML = '<option value="">Seleccionar clase...</option>';
+                selectMision.innerHTML = '<option value="">Seleccionar...</option>';
+                
+                clases.forEach(clase => {
+                    selectProfesor.appendChild(new Option(clase.nombre, clase.id));
+                    selectMision.appendChild(new Option(clase.nombre, clase.id));
+                });
+
+            } catch (error) {
+                console.error('Error al cargar clases:', error);
+                alert('Error al cargar clases');
+            }
+        }
+
+        async function cargarMisionesProfesor() {
+            const claseId = document.getElementById('filtro-clase-profesor').value;
+            if (!claseId) {
+                document.getElementById('misiones-grid').innerHTML = '<p class="empty-state">Selecciona una clase para ver las misiones</p>';
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/misiones/clase/${claseId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                misiones = data.misiones || [];
+                mostrarMisionesProfesor(misiones);
+
+            } catch (error) {
+                console.error('Error al cargar misiones:', error);
+                alert('Error al cargar misiones');
+            }
+        }
+
+        async function cargarMisionesEstudiante() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/misiones/mis-misiones', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                misiones = data.mis_misiones || [];
+                mostrarMisionesEstudiante(misiones);
+
+            } catch (error) {
+                console.error('Error al cargar misiones:', error);
+                alert('Error al cargar misiones');
+            }
+        }
+
+        function mostrarMisionesProfesor(misiones) {
+            const grid = document.getElementById('misiones-grid');
+            grid.innerHTML = '';
+
+            if (misiones.length === 0) {
+                grid.innerHTML = '<p class="empty-state">No hay misiones creadas para esta clase</p>';
+                return;
+            }
+
+            misiones.forEach(mision => {
+                const div = document.createElement('div');
+                div.className = `mision-card dificultad-${mision.dificultad}`;
+                div.innerHTML = `
+                    <div class="mision-header">
+                        <h4>${mision.nombre}</h4>
+                        <span class="badge badge-${mision.activa ? 'success' : 'secondary'}">
+                            ${mision.activa ? 'Activa' : 'Pausada'}
+                        </span>
+                    </div>
+                    <p class="mision-descripcion">${mision.descripcion}</p>
+                    <div class="mision-details">
+                        <span class="detail">Tipo: ${mision.tipo}</span>
+                        <span class="detail">Dificultad: ${mision.dificultad}</span>
+                        <span class="detail">XP: ${mision.xp_recompensa}</span>
+                    </div>
+                    <div class="mision-fecha">
+                        Límite: ${new Date(mision.fecha_limite).toLocaleDateString()}
+                    </div>
+                    <div class="mision-actions">
+                        <button onclick="toggleMision('${mision._id}', ${mision.activa})" 
+                                class="btn btn-sm ${mision.activa ? 'btn-warning' : 'btn-success'}">
+                            ${mision.activa ? 'Pausar' : 'Activar'}
+                        </button>
+                        <button onclick="verEstadisticasMision('${mision._id}')" class="btn btn-sm btn-info">
+                            Estadísticas
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function mostrarMisionesEstudiante(misiones) {
+            const grid = document.getElementById('misiones-grid');
+            grid.innerHTML = '';
+
+            if (misiones.length === 0) {
+                grid.innerHTML = '<p class="empty-state">No tienes misiones asignadas</p>';
+                return;
+            }
+
+            misiones.forEach(progreso => {
+                const mision = progreso.mision_id;
+                const div = document.createElement('div');
+                div.className = `mision-card dificultad-${mision.dificultad} ${progreso.completada ? 'completada' : ''}`;
+                div.innerHTML = `
+                    <div class="mision-header">
+                        <h4>${mision.nombre}</h4>
+                        <span class="badge badge-${mision.dificultad}">
+                            ${mision.dificultad}
+                        </span>
+                    </div>
+                    <p class="mision-descripcion">${mision.descripcion}</p>
+                    <div class="mision-details">
+                        <span class="detail">Tipo: ${mision.tipo}</span>
+                        <span class="detail">XP: ${mision.xp_recompensa}</span>
+                        <span class="detail">Intentos: ${progreso.intentos}</span>
+                    </div>
+                    <div class="progreso-container">
+                        <div class="progreso-bar">
+                            <div class="progreso-fill" style="width: ${progreso.progreso_actual}%"></div>
+                        </div>
+                        <span class="progreso-text">${progreso.progreso_actual}%</span>
+                    </div>
+                    <div class="mision-fecha">
+                        Límite: ${new Date(mision.fecha_limite).toLocaleDateString()}
+                    </div>
+                    <div class="mision-actions">
+                        ${!progreso.completada 
+                            ? `<button onclick="actualizarProgresoMision('${mision._id}', ${progreso.progreso_actual}, '${mision.nombre}')" 
+                                       class="btn btn-primary">Actualizar Progreso</button>`
+                            : '<span class="badge badge-success">Completada</span>'
+                        }
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function mostrarCrearMision() {
+            document.getElementById('modal-crear-mision').style.display = 'flex';
+        }
+
+        async function crearMision() {
+            try {
+                const token = localStorage.getItem('token');
+                const formData = {
+                    nombre: document.getElementById('nombre-mision').value,
+                    descripcion: document.getElementById('descripcion-mision').value,
+                    xp_recompensa: parseInt(document.getElementById('xp-recompensa').value),
+                    clase_id: document.getElementById('clase-mision').value,
+                    tipo: document.getElementById('tipo-mision').value,
+                    dificultad: document.getElementById('dificultad-mision').value,
+                    fecha_limite: document.getElementById('fecha-limite').value
+                };
+
+                const response = await fetch('/api/misiones/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Misión creada exitosamente');
+                    cerrarModal('modal-crear-mision');
+                    document.getElementById('form-crear-mision').reset();
+                    cargarMisionesProfesor();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error al crear misión:', error);
+                alert('Error al crear misión');
+            }
+        }
+
+        function actualizarProgresoMision(misionId, progresoActual, nombreMision) {
+            document.getElementById('progreso-actual').value = progresoActual;
+            document.getElementById('progreso-value').textContent = progresoActual + '%';
+            document.getElementById('form-progreso').dataset.misionId = misionId;
+            
+            document.getElementById('mision-info').innerHTML = `
+                <div class="mision-preview">
+                    <h4>${nombreMision}</h4>
+                    <p>Progreso actual: ${progresoActual}%</p>
+                </div>
+            `;
+            
+            document.getElementById('modal-progreso').style.display = 'flex';
+        }
+
+        async function actualizarProgreso() {
+            try {
+                const misionId = document.getElementById('form-progreso').dataset.misionId;
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch(`/api/misiones/${misionId}/progreso`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        progreso_actual: parseInt(document.getElementById('progreso-actual').value),
+                        notas: document.getElementById('notas-progreso').value
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Progreso actualizado exitosamente');
+                    cerrarModal('modal-progreso');
+                    cargarMisionesEstudiante();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error al actualizar progreso:', error);
+                alert('Error al actualizar progreso');
+            }
+        }
+
+        function updateProgressValue() {
+            const value = document.getElementById('progreso-actual').value;
+            document.getElementById('progreso-value').textContent = value + '%';
+        }
+
+        async function toggleMision(misionId, estadoActual) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/misiones/${misionId}/toggle`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message);
+                    cargarMisionesProfesor();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error al cambiar estado de misión:', error);
+                alert('Error al cambiar estado de misión');
+            }
+        }
+
+        function verEstadisticasMision(misionId) {
+            // TODO: Implementar vista de estadísticas
+            alert('Función de estadísticas en desarrollo');
+        }
+
+        function aplicarFiltroEstudiante() {
+            const filtro = document.getElementById('filtro-estado').value;
+            let misionesFiltradas = misiones;
+            
+            if (filtro === 'activa') {
+                misionesFiltradas = misiones.filter(m => !m.completada);
+            } else if (filtro === 'completada') {
+                misionesFiltradas = misiones.filter(m => m.completada);
+            }
+            
+            mostrarMisionesEstudiante(misionesFiltradas);
+        }
+
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            if (modalId === 'modal-crear-mision') {
+                document.getElementById('form-crear-mision').reset();
+            } else if (modalId === 'modal-progreso') {
+                document.getElementById('form-progreso').reset();
+                document.getElementById('mision-info').innerHTML = '';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            location.href = 'login.html';
+        }
+
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            const modals = ['modal-crear-mision', 'modal-progreso'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    cerrarModal(modalId);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

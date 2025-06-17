@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Títulos - ClassCraft</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style_titulos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-logo">🏆 ClassCraft - Títulos</h1>
+            <div class="nav-right">
+                <span id="user-info" class="user-info"></span>
+                <button id="logout-btn" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Filtros y controles -->
+        <div class="filters-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="categoria-filter">Categoría:</label>
+                    <select id="categoria-filter" class="form-control">
+                        <option value="">Todas</option>
+                        <option value="academico">Académico</option>
+                        <option value="social">Social</option>
+                        <option value="combate">Combate</option>
+                        <option value="especial">Especial</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="rareza-filter">Rareza:</label>
+                    <select id="rareza-filter" class="form-control">
+                        <option value="">Todas</option>
+                        <option value="comun">Común</option>
+                        <option value="raro">Raro</option>
+                        <option value="epico">Épico</option>
+                        <option value="legendario">Legendario</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <button id="mis-titulos-btn" class="btn btn-primary">
+                        <i class="fas fa-crown"></i> Mis Títulos
+                    </button>
+                </div>
+
+                <div class="filter-group">
+                    <button id="verificar-requisitos-btn" class="btn btn-success">
+                        <i class="fas fa-check-circle"></i> Verificar Requisitos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats rápidas -->
+        <div class="stats-grid" id="stats-section" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="total-titulos">0</div>
+                    <div class="stat-label">Títulos Obtenidos</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="bono-xp">+0</div>
+                    <div class="stat-label">Bono XP Total</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="bono-monedas">+0</div>
+                    <div class="stat-label">Bono Monedas</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="habilidades-especiales">0</div>
+                    <div class="stat-label">Habilidades Especiales</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de administración (solo admin/profesor) -->
+        <div class="admin-panel" id="admin-panel" style="display: none;">
+            <div class="admin-section">
+                <h3><i class="fas fa-tools"></i> Panel de Administración</h3>
+                <div class="admin-actions">
+                    <button id="crear-titulo-btn" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Crear Título
+                    </button>
+                    <button id="stats-generales-btn" class="btn btn-info">
+                        <i class="fas fa-chart-bar"></i> Estadísticas Generales
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de títulos -->
+        <div class="titulos-grid" id="titulos-container">
+            <!-- Los títulos se cargan dinámicamente aquí -->
+        </div>
+
+        <!-- Loading spinner -->
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Cargando títulos...</p>
+        </div>
+
+        <!-- Mensaje de error -->
+        <div class="error-message" id="error-message" style="display: none;"></div>
+    </main>
+
+    <!-- Modal para crear título (admin) -->
+    <div id="crear-titulo-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus"></i> Crear Nuevo Título</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="crear-titulo-form">
+                    <div class="form-group">
+                        <label for="titulo-nombre">Nombre:</label>
+                        <input type="text" id="titulo-nombre" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="titulo-descripcion">Descripción:</label>
+                        <textarea id="titulo-descripcion" class="form-control" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="titulo-requisito">Requisito:</label>
+                        <input type="text" id="titulo-requisito" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="titulo-categoria">Categoría:</label>
+                            <select id="titulo-categoria" class="form-control" required>
+                                <option value="academico">Académico</option>
+                                <option value="social">Social</option>
+                                <option value="combate">Combate</option>
+                                <option value="especial">Especial</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="titulo-rareza">Rareza:</label>
+                            <select id="titulo-rareza" class="form-control" required>
+                                <option value="comun">Común</option>
+                                <option value="raro">Raro</option>
+                                <option value="epico">Épico</option>
+                                <option value="legendario">Legendario</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="titulo-bono-xp">Bono XP:</label>
+                            <input type="number" id="titulo-bono-xp" class="form-control" min="0" value="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="titulo-bono-monedas">Bono Monedas:</label>
+                            <input type="number" id="titulo-bono-monedas" class="form-control" min="0" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="titulo-permanente"> Título Permanente
+                        </label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Crear Título
+                        </button>
+                        <button type="button" class="btn btn-secondary modal-close">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de título -->
+    <div id="titulo-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="titulo-modal-nombre">Detalles del Título</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="titulo-modal-body">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para estadísticas generales -->
+    <div id="stats-modal" class="modal" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3><i class="fas fa-chart-bar"></i> Estadísticas Generales</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="stats-modal-body">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/titulos.js"></script>
+</body>
+</html>

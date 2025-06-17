@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCraft - Habilidades</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🎮 <span>Class</span>Craft</h1>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
+                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="/dashboard.html">🏠 Dashboard</a>
+            <a href="/crear-personaje.html">⚔️ Mi Personaje</a>
+            <a href="/clases.html">🏫 Clases</a>
+            <a href="/equipos.html">⚔️ Equipos</a>
+            <a href="/dev.html">🔧 DEV</a>
+        </div>
+
+        <div id="verificarPersonaje" class="card">
+            <div class="loading">Verificando tu personaje...</div>
+        </div>
+
+        <div id="contenidoHabilidades" class="hidden">
+            <div class="card">
+                <h2>⚔️ Tu Personaje</h2>
+                <div id="statsPersonaje">
+                    <div class="loading">Cargando stats...</div>
+                </div>
+            </div>
+
+            <div id="efectosActivos" class="card hidden">
+                <h3>✨ Efectos Activos</h3>
+                <div id="listaEfectos"></div>
+            </div>
+
+            <div class="card">
+                <h3>🔮 Habilidades Disponibles</h3>
+                <div class="form-group">
+                    <label for="filtroTipo">Filtrar por tipo:</label>
+                    <select id="filtroTipo">
+                        <option value="todas">Todas las habilidades</option>
+                        <option value="general">Habilidades generales</option>
+                        <option value="clase">Habilidades de clase</option>
+                        <option value="curacion">Curación</option>
+                        <option value="defensa">Defensa</option>
+                        <option value="utilidad">Utilidad</option>
+                        <option value="ataque">Ataque</option>
+                    </select>
+                </div>
+
+                <div id="listaHabilidades">
+                    <div class="loading">Cargando habilidades...</div>
+                </div>
+            </div>
+
+            <div id="cooldownsActivos" class="card hidden">
+                <h3>⏰ Cooldowns Activos</h3>
+                <div id="listaCooldowns"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let personajeData = null;
+        let habilidadesDisponibles = [];
+        let efectosActivos = [];
+        let cooldownsActivos = [];
+
+        if (!requireAuth() || currentUser.rol !== 'estudiante') {
+            showAlert('Solo los estudiantes pueden usar habilidades', 'error');
+            window.location.href = '/dashboard.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
+            
+            await verificarYCargarDatos();
+            setupFiltros();
+        });
+
+        async function verificarYCargarDatos() {
+            const verificarElement = document.getElementById('verificarPersonaje');
+            
+            try {
+                personajeData = await getMyPersonaje();
+                
+                if (!personajeData.personaje) {
+                    verificarElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h4>⚠️ Necesitas crear un personaje primero</h4>
+                            <p>Para usar habilidades, necesitas tener un personaje creado.</p>
+                            <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                habilidadesDisponibles = personajeData.habilidades_disponibles || [];
+                efectosActivos = personajeData.efectos_activos || [];
+                cooldownsActivos = personajeData.cooldowns_activos || [];
+
+                verificarElement.classList.add('hidden');
+                document.getElementById('contenidoHabilidades').classList.remove('hidden');
+
+                await cargarStatsPersonaje();
+                cargarEfectosActivos();
+                cargarHabilidades();
+                cargarCooldowns();
+
+            } catch (error) {
+                verificarElement.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>⚠️ Necesitas crear un personaje primero</h4>
+                        <p>Para usar habilidades, necesitas tener un personaje creado.</p>
+                        <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
+                    </div>
+                `;
+            }
+        }
+
+        async function cargarStatsPersonaje() {
+            const statsElement = document.getElementById('statsPersonaje');
+            const p = personajeData.personaje;
+            
+            statsElement.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: center;">
+                    <div>
+                        <h4 style="color: #4a5568; margin-bottom: 10px;">${p.nombre}</h4>
+                        <p><strong>Clase:</strong> ${p.clase_personaje_id.nombre}</p>
+                        <p><strong>Raza:</strong> ${p.raza_id.nombre}</p>
+                        <p><strong>Nivel:</strong> ${p.nivel}</p>
+                    </div>
+                    
+                    <div>
+                        <div style="margin: 10px 0;">
+                            <strong>Salud:</strong> ${renderProgressBar(p.salud_actual, p.salud_maxima, 'health')}
+                        </div>
+                        
+                        <div style="margin: 10px 0;">
+                            <strong>Energía:</strong> ${renderProgressBar(p.energia_actual, p.energia_maxima, 'energy')}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button class="btn btn-secondary" onclick="recargarDatos()">
+                            🔄 Actualizar
+                        </button>
+                        <p style="margin-top: 10px; color: #718096; font-size: 0.9em;">
+                            Última actualización: ${new Date().toLocaleTimeString()}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cargarEfectosActivos() {
+            const efectosElement = document.getElementById('efectosActivos');
+            const listaElement = document.getElementById('listaEfectos');
+            
+            if (efectosActivos.length === 0) {
+                efectosElement.classList.add('hidden');
+                return;
+            }
+
+            efectosElement.classList.remove('hidden');
+            listaElement.innerHTML = efectosActivos.map(efecto => {
+                const tiempoRestante = new Date(efecto.fecha_expiracion) - new Date();
+                const minutosRestantes = Math.max(0, Math.floor(tiempoRestante / 1000 / 60));
+                
+                return `
+                    <div style="background: #e6fffa; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #38b2ac;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h5 style="color: #2d3748; margin-bottom: 5px;">${efecto.descripcion}</h5>
+                                <p style="margin: 0; color: #4a5568;"><strong>Efecto:</strong> ${efecto.tipo_efecto} (+${efecto.valor_puntos} puntos)</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="background: #38b2ac; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">
+                                    ${minutosRestantes}m restantes
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function cargarHabilidades(filtro = 'todas') {
+            const listaElement = document.getElementById('listaHabilidades');
+            
+            if (habilidadesDisponibles.length === 0) {
+                listaElement.innerHTML = `
+                    <div class="alert alert-info">
+                        <p>No tienes habilidades disponibles aún.</p>
+                        <p>Las habilidades se desbloquean al subir de nivel.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let habilidadesFiltradas = habilidadesDisponibles;
+            if (filtro !== 'todas') {
+                habilidadesFiltradas = habilidadesDisponibles.filter(habilidad => {
+                    if (filtro === 'general') return habilidad.es_general;
+                    if (filtro === 'clase') return !habilidad.es_general;
+                    return habilidad.tipo === filtro;
+                });
+            }
+
+            listaElement.innerHTML = habilidadesFiltradas.map(habilidad => {
+                const personajeHabilidad = personajeData.personaje.habilidades.find(h => h.habilidad_id.toString() === habilidad._id.toString());
+                const estaDesbloqueada = personajeHabilidad && personajeHabilidad.desbloqueada;
+                const cooldown = cooldownsActivos.find(c => c.habilidad_id.toString() === habilidad._id.toString());
+                const enCooldown = cooldown && cooldown.activo;
+                const tieneEnergia = personajeData.personaje.energia_actual >= habilidad.costo_energia;
+                
+                const puedeUsar = estaDesbloqueada && !enCooldown && tieneEnergia;
+                
+                let estadoTexto = '';
+                let estadoColor = '';
+                
+                if (!estaDesbloqueada) {
+                    estadoTexto = `Desbloqueada en nivel ${habilidad.nivel_desbloqueo}`;
+                    estadoColor = '#a0aec0';
+                } else if (enCooldown) {
+                    const tiempoRestante = new Date(cooldown.fecha_disponible) - new Date();
+                    const minutosRestantes = Math.max(0, Math.floor(tiempoRestante / 1000 / 60));
+                    estadoTexto = `Cooldown: ${minutosRestantes}m`;
+                    estadoColor = '#e53e3e';
+                } else if (!tieneEnergia) {
+                    estadoTexto = `Energía insuficiente (${habilidad.costo_energia} requerida)`;
+                    estadoColor = '#dd6b20';
+                } else {
+                    estadoTexto = 'Disponible';
+                    estadoColor = '#38a169';
+                }
+                
+                return `
+                    <div class="habilidad-card" style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0; ${!puedeUsar ? 'opacity: 0.6;' : ''}">
+                        <div style="display: grid; grid-template-columns: 1fr 200px; gap: 20px; align-items: center;">
+                            <div>
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <h4 style="color: #4a5568; margin: 0 10px 0 0;">${habilidad.nombre}</h4>
+                                    <span style="background: ${habilidad.es_general ? '#667eea' : '#ed8936'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em;">
+                                        ${habilidad.es_general ? 'General' : 'Clase'}
+                                    </span>
+                                    <span style="background: #4fd1c7; color: #234e52; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; margin-left: 5px;">
+                                        ${habilidad.tipo}
+                                    </span>
+                                </div>
+                                
+                                <p style="color: #718096; margin-bottom: 10px;">${habilidad.descripcion}</p>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; font-size: 0.9em;">
+                                    <div><strong>Costo:</strong> ${habilidad.costo_energia} energía</div>
+                                    <div><strong>Cooldown:</strong> ${Math.floor(habilidad.cooldown_segundos / 60)}m</div>
+                                    <div><strong>Nivel req:</strong> ${habilidad.nivel_desbloqueo}</div>
+                                </div>
+                                
+                                <div style="margin-top: 10px;">
+                                    <strong>Efectos:</strong>
+                                    ${habilidad.efectos.map(efecto => 
+                                        `<span style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-size: 0.85em;">
+                                            ${efecto.objetivo}: ${efecto.tipo} ${efecto.valor_puntos > 0 ? '+' : ''}${efecto.valor_puntos}
+                                        </span>`
+                                    ).join('')}
+                                </div>
+                                
+                                <p style="margin-top: 10px; color: ${estadoColor}; font-weight: bold; font-size: 0.9em;">
+                                    ${estadoTexto}
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <button class="btn ${puedeUsar ? 'btn-primary' : 'btn-secondary'}" 
+                                        onclick="${puedeUsar ? `usarHabilidad('${habilidad._id}')` : 'return false'}" 
+                                        ${!puedeUsar ? 'disabled' : ''}>
+                                    ${puedeUsar ? '🎩 Usar Habilidad' : '❌ No Disponible'}
+                                </button>
+                                
+                                ${personajeHabilidad && personajeHabilidad.veces_usada > 0 ? 
+                                    `<p style="margin-top: 10px; color: #718096; font-size: 0.85em;">
+                                        Usada ${personajeHabilidad.veces_usada} veces
+                                    </p>` : ''
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function cargarCooldowns() {
+            const cooldownsElement = document.getElementById('cooldownsActivos');
+            const listaElement = document.getElementById('listaCooldowns');
+            
+            const cooldownsActivosActuales = cooldownsActivos.filter(c => c.activo);
+            
+            if (cooldownsActivosActuales.length === 0) {
+                cooldownsElement.classList.add('hidden');
+                return;
+            }
+
+            cooldownsElement.classList.remove('hidden');
+            listaElement.innerHTML = cooldownsActivosActuales.map(cooldown => {
+                const habilidad = habilidadesDisponibles.find(h => h._id.toString() === cooldown.habilidad_id.toString());
+                const tiempoRestante = new Date(cooldown.fecha_disponible) - new Date();
+                const minutosRestantes = Math.max(0, Math.floor(tiempoRestante / 1000 / 60));
+                const segundosRestantes = Math.max(0, Math.floor((tiempoRestante / 1000) % 60));
+                
+                return `
+                    <div style="background: #fed7d7; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #e53e3e;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h5 style="color: #2d3748; margin-bottom: 5px;">${habilidad ? habilidad.nombre : 'Habilidad desconocida'}</h5>
+                                <p style="margin: 0; color: #4a5568;">No se puede usar hasta que termine el cooldown</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="background: #e53e3e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">
+                                    ${minutosRestantes}m ${segundosRestantes}s
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setupFiltros() {
+            const filtroElement = document.getElementById('filtroTipo');
+            filtroElement.addEventListener('change', (e) => {
+                cargarHabilidades(e.target.value);
+            });
+        }
+
+        async function usarHabilidad(habilidadId) {
+            const habilidad = habilidadesDisponibles.find(h => h._id === habilidadId);
+            
+            if (!confirm(`¿Quieres usar la habilidad "${habilidad.nombre}"?\n\nCosto: ${habilidad.costo_energia} energía\nCooldown: ${Math.floor(habilidad.cooldown_segundos / 60)} minutos`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/personajes/usar-habilidad', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
+                    },
+                    body: JSON.stringify({ habilidad_id: habilidadId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error usando habilidad');
+                }
+
+                mostrarEfectoHabilidad(habilidad);
+                
+                showAlert(`✨ ¡Has usado "${habilidad.nombre}"! ${data.mensaje}`, 'success');
+                
+                await recargarDatos();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function mostrarEfectoHabilidad(habilidad) {
+            const efecto = document.createElement('div');
+            efecto.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                color: white;
+                padding: 20px 40px;
+                border-radius: 12px;
+                font-size: 1.5em;
+                font-weight: bold;
+                z-index: 10000;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                animation: habilidadUsada 2s ease-out forwards;
+            `;
+            
+            efecto.textContent = `✨ ${habilidad.nombre} ✨`;
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes habilidadUsada {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+                }
+            `;
+            
+            document.head.appendChild(style);
+            document.body.appendChild(efecto);
+            
+            setTimeout(() => {
+                document.body.removeChild(efecto);
+                document.head.removeChild(style);
+            }, 2000);
+        }
+
+        async function recargarDatos() {
+            try {
+                personajeData = await getMyPersonaje();
+                habilidadesDisponibles = personajeData.habilidades_disponibles || [];
+                efectosActivos = personajeData.efectos_activos || [];
+                cooldownsActivos = personajeData.cooldowns_activos || [];
+                
+                await cargarStatsPersonaje();
+                cargarEfectosActivos();
+                cargarHabilidades(document.getElementById('filtroTipo').value);
+                cargarCooldowns();
+                
+                showAlert('🔄 Datos actualizados', 'success');
+                
+            } catch (error) {
+                console.error('Error recargando datos:', error);
+                showAlert('Error actualizando datos: ' + error.message, 'error');
+            }
+        }
+
+        setInterval(async () => {
+            if (document.getElementById('contenidoHabilidades').classList.contains('hidden')) return;
+            
+            try {
+                await recargarDatos();
+            } catch (error) {
+                console.error('Error en auto-refresh:', error);
+            }
+        }, 30000);
+    </script>
+
+    <style>
+        .habilidad-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .habilidad-card[style*="opacity: 0.6"]:hover {
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</body>
+</html>
