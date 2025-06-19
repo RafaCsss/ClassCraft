@@ -28,7 +28,7 @@
         <div class="card">
             <h2>🎓 Unirse a una Clase</h2>
             
-            <div id="verificarPersonaje" class="alert alert-info">
+            <div id="verificarPersonaje" style="padding: 15px; background: rgba(245, 235, 215, 0.95); border-radius: 8px; border: 2px solid #CD853F; margin-bottom: 20px;">
                 <p>🔍 Verificando tu personaje...</p>
             </div>
 
@@ -103,7 +103,7 @@
                 
                 if (!personajeData.personaje) {
                     verificarElement.innerHTML = `
-                        <div class="alert alert-warning">
+                        <div style="padding: 15px; background: rgba(254, 251, 191, 0.95); border-radius: 8px; border: 2px solid #f6e05e; color: #744210;">
                             <h4>⚠️ Necesitas crear un personaje primero</h4>
                             <p>Para unirte a una clase, necesitas tener un personaje creado.</p>
                             <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
@@ -123,7 +123,7 @@
 
             } catch (error) {
                 verificarElement.innerHTML = `
-                    <div class="alert alert-warning">
+                    <div style="padding: 15px; background: rgba(254, 251, 191, 0.95); border-radius: 8px; border: 2px solid #f6e05e; color: #744210;">
                         <h4>⚠️ Necesitas crear un personaje primero</h4>
                         <p>Para unirte a una clase, necesitas tener un personaje creado.</p>
                         <a href="/crear-personaje.html" class="btn btn-primary">Crear Mi Personaje</a>
@@ -140,7 +140,7 @@
                 
                 if (clasesData.clases.length === 0) {
                     listaElement.innerHTML = `
-                        <div class="alert alert-info">
+                        <div style="padding: 15px; background: rgba(245, 235, 215, 0.95); border-radius: 8px; border: 2px solid #CD853F; color: #2F1B14; border-left: 4px solid #DAA520;">
                             <p>No estás registrado en ninguna clase aún.</p>
                         </div>
                     `;
@@ -167,7 +167,7 @@
                     `).join('');
                 }
             } catch (error) {
-                listaElement.innerHTML = `<div class="alert alert-error">Error cargando clases: ${error.message}</div>`;
+                listaElement.innerHTML = `<div style="padding: 15px; background: rgba(254, 215, 215, 0.95); border-radius: 8px; border: 2px solid #fc8181; color: #742a2a;">Error cargando clases: ${error.message}</div>`;
             }
         }
 

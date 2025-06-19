@@ -8,11 +8,14 @@
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1>🎮 <span>Class</span>Craft</h1>
-            <div style="text-align: center; margin-top: 10px;">
-                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
-                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+        <div class="header-content container">
+            <div class="logo-section">
+                <h1>🎮 <span>Class</span>Craft</h1>
+                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
+                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em; display: block; margin-top: 8px;"></span>
+            </div>
+            <div class="auth-buttons">
+                <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
             </div>
         </div>
     </div>
@@ -86,6 +89,58 @@
             </div>
         </div>
     </div>
+
+    <footer class="epic-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ClassCraft</h3>
+                    <p>Transformando la educación a través de la gamificación y aventuras épicas en el aula.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Recursos</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Guía del Profesor</a></li>
+                        <li><a href="#">Manual del Estudiante</a></li>
+                        <li><a href="#">Habilidades & Clases</a></li>
+                        <li><a href="#">Sistema de Puntos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Soporte</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Centro de Ayuda</a></li>
+                        <li><a href="#">Reportar Bug</a></li>
+                        <li><a href="#">Sugerir Mejora</a></li>
+                        <li><a href="#">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Comunidad</h3>
+                    <div class="social-links">
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📘</span> Facebook
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">🐦</span> Twitter
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📷</span> Instagram
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="credits">
+                    <p>Desarrollado con ❤️ por <strong>Rafael Inga Tello</strong></p>
+                    <p class="tech-stack">Node.js • MongoDB • Express • Vanilla JS</p>
+                </div>
+                <div class="footer-logo">
+                    <div class="mini-logo">Class<span>Craft</span></div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="/js/app.js"></script>
     <script>
@@ -210,8 +265,8 @@
                         `;
                     } else {
                         clasesElement.innerHTML = clasesData.clases.map(clase => `
-                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                                <h4>${clase.nombre}</h4>
+                            <div style="background: rgba(245, 235, 215, 0.7); padding: 15px; border-radius: 8px; margin: 10px 0; border: 2px solid #CD853F;">
+                                <h4 style="color: #2F1B14;">${clase.nombre}</h4>
                                 <p><strong>Código:</strong> ${clase.codigo}</p>
                                 <p><strong>Profesor:</strong> ${clase.profesor}</p>
                                 <p><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
@@ -250,19 +305,19 @@
                     `;
                 } else {
                     clasesElement.innerHTML = clasesData.clases.map(clase => `
-                        <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                        <div style="background: rgba(245, 235, 215, 0.8); padding: 20px; border-radius: 8px; margin: 15px 0; border: 2px solid #CD853F; box-shadow: 0 4px 8px rgba(139, 69, 19, 0.2);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <h4 style="color: #4a5568; margin-bottom: 5px;">${clase.nombre}</h4>
-                                    <p style="margin: 5px 0;"><strong>Código:</strong> <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${clase.codigo}</span></p>
-                                    <p style="margin: 5px 0;"><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
-                                    <p style="margin: 5px 0;"><strong>Equipos:</strong> ${clase.equipos_count}</p>
+                                    <h4 style="color: #2F1B14; margin-bottom: 5px;">${clase.nombre}</h4>
+                                    <p style="margin: 5px 0; color: #2F1B14;"><strong>Código:</strong> <span style="background: #DAA520; color: #2F1B14; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold;">${clase.codigo}</span></p>
+                                    <p style="margin: 5px 0; color: #2F1B14;"><strong>Estudiantes:</strong> ${clase.estudiantes_count}</p>
+                                    <p style="margin: 5px 0; color: #2F1B14;"><strong>Equipos:</strong> ${clase.equipos_count}</p>
                                 </div>
                                 <div>
                                     <a href="/gestionar-clase.html?id=${clase.id}" class="btn btn-primary">Gestionar</a>
                                 </div>
                             </div>
-                            <p style="color: #718096; margin-top: 10px;">${clase.descripcion}</p>
+                            <p style="color: #8B4513; margin-top: 10px;">${clase.descripcion}</p>
                         </div>
                     `).join('');
                 }

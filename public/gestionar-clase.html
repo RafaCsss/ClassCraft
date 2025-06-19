@@ -209,7 +209,7 @@
             } catch (error) {
                 console.error('Error:', error);
                 cargandoElement.innerHTML = `
-                    <div class="alert alert-error">
+                    <div style="padding: 15px; background: rgba(254, 215, 215, 0.95); border-radius: 8px; border: 2px solid #fc8181; color: #742a2a;">
                         <h4>❌ Error cargando la clase</h4>
                         <p>${error.message}</p>
                         <button class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">
@@ -300,14 +300,14 @@
                     Math.round(miembros.reduce((sum, m) => sum + m.nivel, 0) / miembros.length) : 0;
                 
                 html += `
-                    <div class="equipo-seccion" style="background: #e6fffa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38b2ac;">
-                        <div class="equipo-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="equipo-seccion" style="background: #e6fffa; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #38b2ac; border: 2px solid #CD853F; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25); transition: all 0.3s ease;">
+                        <div class="equipo-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(205, 133, 63, 0.3); padding-bottom: 10px;">
                             <div>
-                                <h4 style="color: #2d3748; margin: 0;">⚔️ ${equipoNombre}</h4>
-                                <p style="margin: 5px 0; color: #4a5568;">👥 ${miembros.length}/4 miembros | 🏆 ${equipoPuntos} puntos | 📊 Nivel promedio: ${promedioNivel}</p>
+                                <h4 style="color: #2F1B14; margin: 0; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);">⚔️ ${equipoNombre}</h4>
+                                <p style="margin: 5px 0; color: #8B4513;">👥 ${miembros.length}/4 miembros | 🏆 ${equipoPuntos} puntos | 📊 Nivel promedio: ${promedioNivel}</p>
                             </div>
                             <div>
-                                ${equipo ? `<button class="btn btn-warning btn-sm" onclick="gestionarPuntosEquipo('${equipo._id}', '${equipoNombre}')">💰 Puntos</button>` : ''}
+                                ${equipo ? `<button class="btn btn-warning btn-sm" onclick="gestionarPuntosEquipo('${equipo._id}', '${equipoNombre}')"><span style="filter: drop-shadow(1px 1px 2px rgba(139, 69, 19, 0.3));">💰 Puntos</span></button>` : ''}
                             </div>
                         </div>
                         
@@ -318,13 +318,13 @@
                                 const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
                                 
                                 return `
-                                    <div class="miembro-equipo" style="background: white; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                    <div class="miembro-equipo" style="background: white; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center; border: 1px solid rgba(205, 133, 63, 0.2); box-shadow: 0 3px 8px rgba(139, 69, 19, 0.15); transition: all 0.2s ease;">
                                         <div>
-                                            <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                            <h5 style="color: #2F1B14; margin-bottom: 5px; text-shadow: 0.5px 0.5px 1px rgba(139, 69, 19, 0.1);">
                                                 ${miembro.nombre}
                                                 ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
                                             </h5>
-                                            <p style="margin: 2px 0; font-size: 0.9em; color: #718096;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                            <p style="margin: 2px 0; font-size: 0.9em; color: #8B4513;">${p.clase || 'N/A'} ${p.raza || ''}</p>
                                         </div>
                                         
                                         <div style="font-size: 0.85em;">
@@ -348,10 +348,10 @@
             // Mostrar estudiantes sin equipo
             if (estudiantesSinEquipo.length > 0) {
                 html += `
-                    <div class="sin-equipo-seccion" style="background: #fef5e7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f6ad55;">
-                        <div class="sin-equipo-header" style="margin-bottom: 15px;">
-                            <h4 style="color: #2d3748; margin: 0;">🚫 Sin Equipo (${estudiantesSinEquipo.length} estudiantes)</h4>
-                            <p style="margin: 5px 0; color: #d69e2e;">Estos estudiantes pueden unirse a equipos existentes o formar nuevos equipos</p>
+                    <div class="sin-equipo-seccion" style="background: #fef5e7; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #f6ad55; border: 2px solid #CD853F; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25);">
+                        <div class="sin-equipo-header" style="margin-bottom: 15px; border-bottom: 1px solid rgba(205, 133, 63, 0.3); padding-bottom: 10px;">
+                            <h4 style="color: #2F1B14; margin: 0; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);">🚫 Sin Equipo (${estudiantesSinEquipo.length} estudiantes)</h4>
+                            <p style="margin: 5px 0; color: #8B4513;">Estos estudiantes pueden unirse a equipos existentes o formar nuevos equipos</p>
                         </div>
                         
                         <div class="estudiantes-sin-equipo" style="display: grid; gap: 10px;">
@@ -362,9 +362,9 @@
                                 
                                 if (!p) {
                                     return `
-                                        <div class="estudiante-sin-equipo" style="background: #fed7d7; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                        <div class="estudiante-sin-equipo" style="background: #fed7d7; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center; border: 1px solid rgba(205, 133, 63, 0.3); box-shadow: 0 3px 8px rgba(139, 69, 19, 0.15);">
                                             <div>
-                                                <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                                <h5 style="color: #2F1B14; margin-bottom: 5px; text-shadow: 0.5px 0.5px 1px rgba(139, 69, 19, 0.1);">
                                                     ${estudiante.nombre}
                                                     ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
                                                     <span style="color: #e53e3e; margin-left: 8px;">⚠️ Sin Personaje</span>
@@ -386,13 +386,13 @@
                                     `;
                                 } else {
                                     return `
-                                        <div class="estudiante-sin-equipo" style="background: white; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center;">
+                                        <div class="estudiante-sin-equipo" style="background: white; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center; border: 1px solid rgba(205, 133, 63, 0.2); box-shadow: 0 3px 8px rgba(139, 69, 19, 0.15);">
                                             <div>
-                                                <h5 style="color: #4a5568; margin-bottom: 5px;">
+                                                <h5 style="color: #2F1B14; margin-bottom: 5px; text-shadow: 0.5px 0.5px 1px rgba(139, 69, 19, 0.1);">
                                                     ${estudiante.nombre}
                                                     ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
                                                 </h5>
-                                                <p style="margin: 2px 0; font-size: 0.9em; color: #718096;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                                <p style="margin: 2px 0; font-size: 0.9em; color: #8B4513;">${p.clase || 'N/A'} ${p.raza || ''}</p>
                                             </div>
                                             
                                             <div style="font-size: 0.85em;">
@@ -515,7 +515,7 @@
             
             if (estudiantes.length === 0) {
                 listaElement.innerHTML = `
-                    <div class="alert alert-info">
+                    <div style="padding: 15px; background: rgba(245, 235, 215, 0.95); border-radius: 8px; border: 2px solid #CD853F; color: #2F1B14; border-left: 4px solid #DAA520;">
                         <p>No hay estudiantes registrados en esta clase aún.</p>
                         <p>Comparte el código <strong>${claseActual.codigo}</strong> con tus estudiantes para que se unan.</p>
                     </div>
@@ -854,6 +854,26 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.2s ease;
+        }
+        
+        /* Efectos hover para vista de equipos - ClassCraft theme */
+        .equipo-seccion:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.35);
+            border-color: #DAA520;
+        }
+        
+        .sin-equipo-seccion:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.35);
+            border-color: #DAA520;
+        }
+        
+        .miembro-equipo:hover,
+        .estudiante-sin-equipo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(139, 69, 19, 0.25);
+            border-color: #CD853F;
         }
     </style>
 </body>

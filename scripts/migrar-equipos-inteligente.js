@@ -61,7 +61,7 @@ async function migrarEquiposInteligente() {
                     });
 
                     if (clasesConMiembros.length > 0) {
-                        // Encontrar clase con más miembros del equipo
+                        // Encontrar clase con más miembros del equipo 
                         let mejorClase = null;
                         let maxMiembros = 0;
 

@@ -9,34 +9,50 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1><span>Class</span>Craft</h1>
-            <p style="text-align: center; color: #4a5568; margin-top: 10px;">
-                Sistema RPG Educativo - Convierte tu clase en una aventura
-            </p>
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1><span>Class</span>Craft</h1>
+                    <p style="text-align: center; color: #8B4513; margin-top: 10px;">
+                        Sistema RPG Educativo - Convierte tu clase en una aventura
+                    </p>
+                </div>
+                <div class="auth-buttons">
+                    <a href="/login.html" class="btn btn-primary">Iniciar Sesión</a>
+                    <a href="/register.html" class="btn btn-success">Crear Cuenta</a>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="container">
-        <div class="card" style="text-align: center;">
-            <h2>Bienvenido a ClassCraft</h2>
-            <p style="color: #718096; font-size: 1.1em; margin: 20px 0;">
-                Gamifica tu experiencia educativa con personajes RPG, habilidades mágicas y trabajo en equipo
-            </p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0;">
-                <a href="/login.html" class="btn btn-primary btn-full">
-                    Iniciar Sesión
-                </a>
-                <a href="/register.html" class="btn btn-success btn-full">
-                    Crear Cuenta
-                </a>
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <h2 class="hero-title">¡Embárcate en una Aventura Educativa!</h2>
+                <p class="hero-subtitle">
+                    Transforma tu aula en un reino místico donde el conocimiento es poder y cada lección es una quest épica.
+                </p>
+                <div class="hero-features">
+                    <div class="feature-item">
+                        <span class="feature-icon">⚔️</span>
+                        <span>Combate el aburrimiento</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🏆</span>
+                        <span>Gana experiencia real</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🛡️</span>
+                        <span>Forma alianzas épicas</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
             <div class="card">
                 <h3>Para Profesores</h3>
-                <ul style="text-align: left; color: #4a5568;">
+                <ul style="text-align: left; color: #2F1B14;">
                     <li>Crea clases con códigos únicos</li>
                     <li>Gestiona estudiantes en tiempo real</li>
                     <li>Da/quita XP por participación</li>
@@ -47,7 +63,7 @@
 
             <div class="card">
                 <h3>Para Estudiantes</h3>
-                <ul style="text-align: left; color: #4a5568;">
+                <ul style="text-align: left; color: #2F1B14;">
                     <li>Crea tu personaje RPG único</li>
                     <li>Elige clase y raza con stats balanceados</li>
                     <li>Usa habilidades mágicas en clase</li>
@@ -79,9 +95,9 @@
             </div>
         </div>
 
-        <div class="card" style="background: #e6fffa; border: 1px solid #4fd1c7;">
-            <h3 style="color: #234e52;">Demo & Testing</h3>
-            <p style="color: #234e52;">
+        <div class="card" style="background: #DEB887; border: 2px solid #CD853F;">
+            <h3 style="color: #2F1B14;">Demo & Testing</h3>
+            <p style="color: #2F1B14;">
                 Sistema completo funcionando con datos de prueba incluidos
             </p>
             <div style="text-align: center; margin-top: 20px;">
@@ -93,15 +109,15 @@
         <div class="card">
             <h3>Credenciales de Prueba</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #4a5568;">Profesor</h4>
+                <div style="background: #F5DEB3; padding: 15px; border-radius: 8px; border: 1px solid #CD853F;">
+                    <h4 style="color: #2F1B14;">Profesor</h4>
                     <p><strong>Email:</strong> profesor@test.com</p>
                     <p><strong>Password:</strong> 123456</p>
                     <button onclick="location.href='/login.html'" class="btn btn-primary btn-full">Probar</button>
                 </div>
                 
-                <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #4a5568;">Estudiante</h4>
+                <div style="background: #F5DEB3; padding: 15px; border-radius: 8px; border: 1px solid #CD853F;">
+                    <h4 style="color: #2F1B14;">Estudiante</h4>
                     <p><strong>Email:</strong> ana@test.com</p>
                     <p><strong>Password:</strong> 123456</p>
                     <button onclick="location.href='/login.html'" class="btn btn-success btn-full">Probar</button>
@@ -109,8 +125,8 @@
             </div>
             
             <details style="margin-top: 15px;">
-                <summary style="cursor: pointer; color: #667eea;">Ver más estudiantes</summary>
-                <div style="background: #f7fafc; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px;">
+                <summary style="cursor: pointer; color: #D2691E; font-weight: bold;">Ver más estudiantes</summary>
+                <div style="background: #F5DEB3; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px; border: 1px solid #CD853F;">
                     • carlos@test.com / 123456<br>
                     • maria@test.com / 123456<br>
                     • pedro@test.com / 123456
@@ -118,11 +134,70 @@
             </details>
         </div>
 
-        <div style="text-align: center; margin-top: 40px; color: #718096;">
+        <div style="text-align: center; margin-top: 40px; color: #8B4513;">
             <p>ClassCraft - Sistema RPG Educativo Local</p>
             <p>Desarrollado con Node.js + Express + MongoDB + Vanilla JS</p>
         </div>
     </div>
+
+    <!-- Footer Épico -->
+    <footer class="epic-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ClassCraft</h3>
+                    <p>Transformando la educación a través de la gamificación y aventuras épicas en el aula.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><span class="social-icon">📘</span> Facebook</a>
+                        <a href="#" class="social-link"><span class="social-icon">🐦</span> Twitter</a>
+                        <a href="#" class="social-link"><span class="social-icon">📷</span> Instagram</a>
+                        <a href="#" class="social-link"><span class="social-icon">💼</span> LinkedIn</a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Recursos</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Guía del Profesor</a></li>
+                        <li><a href="#">Manual del Estudiante</a></li>
+                        <li><a href="#">Habilidades & Clases</a></li>
+                        <li><a href="#">Sistema de Puntos</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Soporte</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Centro de Ayuda</a></li>
+                        <li><a href="#">Reportar Bug</a></li>
+                        <li><a href="#">Sugerir Mejora</a></li>
+                        <li><a href="#">Contacto</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Comunidad</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Discord Oficial</a></li>
+                        <li><a href="#">Foro de Maestros</a></li>
+                        <li><a href="#">Blog & Noticias</a></li>
+                        <li><a href="#">Eventos</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="credits">
+                    <p>© 2025 ClassCraft - Sistema RPG Educativo</p>
+                    <p>Desarrollado con ❤️ por <strong>Rafael Inga Tello</strong></p>
+                    <p class="tech-stack">Node.js • Express • MongoDB • Vanilla JS</p>
+                </div>
+                <div class="footer-logo">
+                    <span class="mini-logo">⚔️ <span>Class</span>Craft</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script>
         // Redirigir si ya está logueado

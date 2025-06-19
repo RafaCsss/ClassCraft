@@ -49,6 +49,9 @@ POST /api/clases/unirse/:code # Join class
 1. Install dependencies: `npm install`
 2. Run MongoDB locally
 3. Start server: `node app.js`
-4. Access setup endpoint: `GET /api/setup` (creates test data)
+4. **Initialize Database:** `GET http://localhost:3000/api/setup`
+   - Automatically creates all 18 collections
+   - Populates with test data (users, characters, classes, abilities)
+   - Ready to use immediately!
 
 Turn any classroom into a gamified RPG experience.

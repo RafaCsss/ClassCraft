@@ -7,14 +7,21 @@
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 id="titulo-equipos">⚔️ Equipos</h1>
-            <div class="header-actions">
-                <button onclick="location.href='dashboard.html'" class="btn btn-secondary">← Dashboard</button>
-                <button onclick="logout()" class="btn btn-danger">Cerrar Sesión</button>
+    <div class="header">
+        <div class="header-content container">
+            <div class="logo-section">
+                <h1>🎮 <span>Class</span>Craft</h1>
+                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
+                <span id="titulo-equipos" style="color: #4a5568; font-size: 1.1em; display: block; margin-top: 8px;">⚔️ Equipos</span>
             </div>
-        </header>
+            <div class="auth-buttons">
+                <a href="/dashboard.html" class="btn btn-secondary">Dashboard</a>
+                <button onclick="logout()" class="btn btn-secondary">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
 
         <!-- Selector de Clase -->
         <div class="clase-selector-container card" id="claseSelectorContainer" style="display: none;">
@@ -130,6 +137,58 @@
             </div>
         </div>
     </div>
+
+    <footer class="epic-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ClassCraft</h3>
+                    <p>Transformando la educación a través de la gamificación y aventuras épicas en el aula.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Recursos</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Guía del Profesor</a></li>
+                        <li><a href="#">Manual del Estudiante</a></li>
+                        <li><a href="#">Habilidades & Clases</a></li>
+                        <li><a href="#">Sistema de Puntos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Soporte</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Centro de Ayuda</a></li>
+                        <li><a href="#">Reportar Bug</a></li>
+                        <li><a href="#">Sugerir Mejora</a></li>
+                        <li><a href="#">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Comunidad</h3>
+                    <div class="social-links">
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📘</span> Facebook
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">🐦</span> Twitter
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📷</span> Instagram
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="credits">
+                    <p>Desarrollado con ❤️ por <strong>Rafael Inga Tello</strong></p>
+                    <p class="tech-stack">Node.js • MongoDB • Express • Vanilla JS</p>
+                </div>
+                <div class="footer-logo">
+                    <div class="mini-logo">Class<span>Craft</span></div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script>
         let userRole = null;

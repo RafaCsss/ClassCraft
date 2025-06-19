@@ -204,14 +204,37 @@ function showAlert(message, type = 'info') {
     alertDiv.className = `alert alert-${type}`;
     alertDiv.textContent = message;
     
-    // Insertar al inicio del container principal
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    // Buscar o crear contenedor de alertas
+    let alertContainer = document.querySelector('.alert-container');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.className = 'alert-container';
+        // Insertar después del header
+        const header = document.querySelector('.header');
+        if (header && header.nextSibling) {
+            header.parentNode.insertBefore(alertContainer, header.nextSibling);
+        } else {
+            document.body.appendChild(alertContainer);
+        }
+    }
     
-    // Auto-remover después de 5 segundos
+    // Insertar al inicio del contenedor de alertas
+    alertContainer.insertBefore(alertDiv, alertContainer.firstChild);
+    
+    // Auto-remover después de 4 segundos con animación
     setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+        alertDiv.classList.add('fade-out');
+        // Remover del DOM después de que termine la animación
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+                // Limpiar contenedor si está vacío
+                if (alertContainer.children.length === 0) {
+                    alertContainer.remove();
+                }
+            }
+        }, 400); // 400ms = duración de la animación fade-out
+    }, 4000);
 }
 
 function showLoading(element) {

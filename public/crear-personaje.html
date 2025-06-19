@@ -8,8 +8,15 @@
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1>🎮 <span>Class</span>Craft</h1>
+        <div class="header-content container">
+            <div class="logo-section">
+                <h1>🎮 <span>Class</span>Craft</h1>
+                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
+            </div>
+            <div class="auth-buttons">
+                <a href="/dashboard.html" class="btn btn-secondary">Dashboard</a>
+                <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
+            </div>
         </div>
     </div>
 
@@ -25,7 +32,7 @@
             <h2>⚔️ Crear Mi Personaje</h2>
             
             <div id="personajeExistente" class="hidden">
-                <div class="alert alert-info">
+                <div style="padding: 15px; background: rgba(245, 235, 215, 0.95); border-radius: 8px; border: 2px solid #CD853F; color: #2F1B14; border-left: 4px solid #DAA520;">
                     Ya tienes un personaje creado. <a href="/dashboard.html">Ver en dashboard</a>
                 </div>
             </div>
@@ -36,7 +43,7 @@
                     <select id="clasePersonaje" required>
                         <option value="">Selecciona una clase...</option>
                     </select>
-                    <div id="claseInfo" style="margin-top: 10px; padding: 10px; background: #f7fafc; border-radius: 8px; display: none;">
+                    <div id="claseInfo" style="margin-top: 10px; padding: 10px; background: rgba(245, 235, 215, 0.7); border: 2px solid #CD853F; border-radius: 8px; display: none;">
                         <div id="claseDescripcion"></div>
                     </div>
                 </div>
@@ -46,13 +53,13 @@
                     <select id="raza" required>
                         <option value="">Selecciona una raza...</option>
                     </select>
-                    <div id="razaInfo" style="margin-top: 10px; padding: 10px; background: #f7fafc; border-radius: 8px; display: none;">
+                    <div id="razaInfo" style="margin-top: 10px; padding: 10px; background: rgba(245, 235, 215, 0.7); border: 2px solid #CD853F; border-radius: 8px; display: none;">
                         <div id="razaDescripcion"></div>
                     </div>
                 </div>
 
-                <div id="statsPreview" style="margin: 20px 0; padding: 20px; background: #e6fffa; border-radius: 8px; display: none;">
-                    <h4 style="color: #234e52; margin-bottom: 15px;">📊 Stats Calculadas</h4>
+                <div id="statsPreview" style="margin: 20px 0; padding: 20px; background: linear-gradient(135deg, rgba(245, 235, 215, 0.95) 0%, rgba(222, 184, 135, 0.95) 100%); border: 3px solid #DAA520; border-radius: 12px; display: none; box-shadow: 0 8px 20px rgba(139, 69, 19, 0.3);">
+                    <h4 style="color: #2F1B14; margin-bottom: 15px; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.3);">📊 Stats Calculadas</h4>
                     <div class="stats-grid">
                         <div class="stat-card">
                             <span class="stat-value" id="previewSalud">-</span>
@@ -83,6 +90,58 @@
             </div>
         </div>
     </div>
+
+    <footer class="epic-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ClassCraft</h3>
+                    <p>Transformando la educación a través de la gamificación y aventuras épicas en el aula.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Recursos</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Guía del Profesor</a></li>
+                        <li><a href="#">Manual del Estudiante</a></li>
+                        <li><a href="#">Habilidades & Clases</a></li>
+                        <li><a href="#">Sistema de Puntos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Soporte</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Centro de Ayuda</a></li>
+                        <li><a href="#">Reportar Bug</a></li>
+                        <li><a href="#">Sugerir Mejora</a></li>
+                        <li><a href="#">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Comunidad</h3>
+                    <div class="social-links">
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📘</span> Facebook
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">🐦</span> Twitter
+                        </a>
+                        <a href="#" class="social-link">
+                            <span class="social-icon">📷</span> Instagram
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="credits">
+                    <p>Desarrollado con ❤️ por <strong>Rafael Inga Tello</strong></p>
+                    <p class="tech-stack">Node.js • MongoDB • Express • Vanilla JS</p>
+                </div>
+                <div class="footer-logo">
+                    <div class="mini-logo">Class<span>Craft</span></div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="/js/app.js"></script>
     <script>
@@ -147,10 +206,10 @@
                 // Mostrar información de clases
                 const clasesInfoElement = document.getElementById('clasesInfo');
                 clasesInfoElement.innerHTML = clasesData.map(clase => `
-                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                        <h4 style="color: #4a5568;">⚔️ ${clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)}</h4>
-                        <p style="color: #718096; margin: 5px 0;">${clase.descripcion}</p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div style="background: rgba(245, 235, 215, 0.8); padding: 15px; border-radius: 8px; margin: 10px 0; border: 2px solid #CD853F; box-shadow: 0 4px 8px rgba(139, 69, 19, 0.2);">
+                        <h4 style="color: #2F1B14;">⚔️ ${clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)}</h4>
+                        <p style="color: #8B4513; margin: 5px 0;">${clase.descripcion}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; color: #2F1B14;">
                             <small><strong>Salud inicial:</strong> ${clase.stats_base.salud_inicial}</small>
                             <small><strong>Energía inicial:</strong> ${clase.stats_base.energia_inicial}</small>
                             <small><strong>Salud por nivel:</strong> +${clase.stats_base.salud_por_nivel}</small>
@@ -162,10 +221,10 @@
                 // Mostrar información de razas
                 const razasInfoElement = document.getElementById('razasInfo');
                 razasInfoElement.innerHTML = razasData.map(raza => `
-                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                        <h4 style="color: #4a5568;">🧬 ${raza.nombre.charAt(0).toUpperCase() + raza.nombre.slice(1)}</h4>
-                        <p style="color: #718096; margin: 5px 0;">${raza.descripcion}</p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div style="background: rgba(245, 235, 215, 0.8); padding: 15px; border-radius: 8px; margin: 10px 0; border: 2px solid #CD853F; box-shadow: 0 4px 8px rgba(139, 69, 19, 0.2);">
+                        <h4 style="color: #2F1B14;">🧬 ${raza.nombre.charAt(0).toUpperCase() + raza.nombre.slice(1)}</h4>
+                        <p style="color: #8B4513; margin: 5px 0;">${raza.descripcion}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; color: #2F1B14;">
                             <small><strong>Bono salud:</strong> +${raza.bono_salud}</small>
                             <small><strong>Bono energía:</strong> +${raza.bono_energia}</small>
                         </div>
