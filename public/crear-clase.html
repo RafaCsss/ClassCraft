@@ -8,11 +8,12 @@
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1>🎮 <span>Class</span>Craft</h1>
-            <div style="text-align: center; margin-top: 10px;">
-                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
-                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+        <div class="header-content container">
+            <div class="logo-section">
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px;">
+            </div>
+            <div class="auth-buttons">
+                <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
             </div>
         </div>
     </div>
@@ -119,8 +120,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
-            
             // Ocultar navegación de personaje para profesores
             document.getElementById('navPersonaje').style.display = 'none';
             

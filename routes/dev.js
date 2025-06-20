@@ -22,6 +22,55 @@ const AnimacionActiva = require('../models/animacionActiva');
 
 const router = express.Router();
 
+// GET /api/dev/clear-all - BORRAR TODOS LOS DATOS (versión GET para navegador)
+router.get('/clear-all', async (req, res) => {
+    try {
+        console.log('🚨 INICIANDO BORRADO TOTAL DE LA BASE DE DATOS...');
+        
+        // Borrar todas las colecciones en orden para evitar errores de referencia
+        await AnimacionActiva.deleteMany({});
+        await CooldownHabilidad.deleteMany({});
+        await HistorialAccion.deleteMany({});
+        await EfectoActivo.deleteMany({});
+        await ClaseActiva.deleteMany({});
+        await Notificacion.deleteMany({});
+        await Titulo.deleteMany({});
+        await ProgresoMision.deleteMany({});
+        await Mision.deleteMany({});
+        await Clase.deleteMany({});
+        await Equipo.deleteMany({});
+        await Item.deleteMany({});
+        await Inventario.deleteMany({});
+        await Habilidad.deleteMany({});
+        await Raza.deleteMany({});
+        await ClasePersonaje.deleteMany({});
+        await Personaje.deleteMany({});
+        await Usuario.deleteMany({});
+        
+        console.log('🗑️ TODOS LOS DATOS HAN SIDO BORRADOS');
+        
+        res.json({
+            message: '🗑️ TODOS LOS DATOS HAN SIDO BORRADOS',
+            warning: 'La base de datos está completamente vacía',
+            recommendation: 'Ve a /api/setup para recrear los datos básicos',
+            collections_cleared: [
+                'usuarios', 'personajes', 'clases_personaje', 'razas', 'habilidades',
+                'inventarios', 'items', 'equipos', 'clases', 'misiones',
+                'progreso_misiones', 'titulos', 'notificaciones', 'clases_activas',
+                'efectos_activos', 'historial_acciones', 'cooldowns_habilidades', 'animaciones_activas'
+            ],
+            next_step: 'Ir a http://localhost:3000/api/setup'
+        });
+        
+    } catch (error) {
+        console.error('❌ Error borrando datos:', error);
+        res.status(500).json({
+            error: 'Error borrando datos',
+            details: error.message
+        });
+    }
+});
+
 // POST /api/dev/clear-all - BORRAR TODOS LOS DATOS (PELIGROSO)
 router.post('/clear-all', async (req, res) => {
     try {

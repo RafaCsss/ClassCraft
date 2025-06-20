@@ -39,12 +39,22 @@ app.use(express.urlencoded({ extended: true }));
 // Archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware de logging para todas las rutas de equipos
+app.use('/api/equipos', (req, res, next) => {
+    console.log(`🚀 REQUEST TO EQUIPOS: ${req.method} ${req.originalUrl}`);
+    console.log(`   - Params:`, req.params);
+    console.log(`   - Query:`, req.query);
+    next();
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/personajes', require('./routes/personajes'));
 app.use('/api/clases', require('./routes/clases'));
 app.use('/api/misiones', require('./routes/misiones'));
 app.use('/api/titulos', require('./routes/titulos'));
 app.use('/api/inventarios', require('./routes/inventarios'));
+app.use('/api/equipos-simple', require('./routes/equipos-simple')); // TESTING ENDPOINT SIMPLE
+app.use('/api/equipos/test', require('./routes/equipos-test')); // NUEVAS RUTAS DE TESTING V2
 app.use('/api/equipos', require('./routes/equipos'));
 app.use('/api/dev', require('./routes/dev'));
 
@@ -112,9 +122,11 @@ app.get('/api/test', async (req, res) => {
     }
 });
 
-// Setup datos de prueba
+// Setup datos de prueba - INCLUYE LIMPIEZA AUTOMÁTICA
 app.get('/api/setup', async (req, res) => {
     try {
+        console.log('🔄 SETUP: Limpiando datos existentes...');
+        
         // Limpiar datos existentes
         await Usuario.deleteMany({});
         await Personaje.deleteMany({});
@@ -125,6 +137,17 @@ app.get('/api/setup', async (req, res) => {
         await Inventario.deleteMany({});
         await Equipo.deleteMany({});
         await Clase.deleteMany({});
+        await Mision.deleteMany({});
+        await ProgresoMision.deleteMany({});
+        await Titulo.deleteMany({});
+        await Notificacion.deleteMany({});
+        await ClaseActiva.deleteMany({});
+        await EfectoActivo.deleteMany({});
+        await HistorialAccion.deleteMany({});
+        await CooldownHabilidad.deleteMany({});
+        await AnimacionActiva.deleteMany({});
+        
+        console.log('✅ SETUP: Datos limpiados, creando nuevos datos...');
         
         // Clases de personaje
         const mago = new ClasePersonaje({

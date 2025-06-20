@@ -10,9 +10,7 @@
     <div class="header">
         <div class="header-content container">
             <div class="logo-section">
-                <h1>🎮 <span>Class</span>Craft</h1>
-                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
-                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em; display: block; margin-top: 8px;"></span>
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px; margin-left: 120px;">
             </div>
             <div class="auth-buttons">
                 <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
@@ -25,6 +23,7 @@
             <a href="/dashboard.html">🏠 Dashboard</a>
             <a href="/crear-personaje.html" id="navPersonaje">⚔️ Mi Personaje</a>
             <a href="/clases.html" class="active">🏫 Clases</a>
+            <a href="/equipos.html">⚔️ Equipos</a>
             <a href="/dev.html">🔧 DEV</a>
         </div>
 
@@ -168,9 +167,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const userGreeting = document.getElementById('userGreeting');
-            userGreeting.textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
-
             // Mostrar vista según rol
             if (currentUser.rol === 'profesor') {
                 document.getElementById('vistaProfesor').classList.remove('hidden');
@@ -377,6 +373,9 @@
                                 <button class="btn btn-primary btn-sm" onclick="verProgreso('${clase.id}')">
                                     📈 Mi Progreso
                                 </button>
+                                <button class="btn btn-success btn-sm" onclick="verEquiposClase('${clase.id}')">
+                                    ⚔️ Equipos
+                                </button>
                                 <button class="btn btn-secondary btn-sm" onclick="verCompañeros('${clase.id}')">
                                     👥 Compañeros
                                 </button>
@@ -472,6 +471,11 @@
         function verProgreso(claseId) {
             // Implementar vista de progreso individual
             showAlert('Función de progreso en desarrollo', 'info');
+        }
+
+        function verEquiposClase(claseId) {
+            // Redirigir a la página de equipos con el filtro de la clase específica
+            window.location.href = `/equipos.html?clase_id=${claseId}`;
         }
 
         function verCompañeros(claseId) {

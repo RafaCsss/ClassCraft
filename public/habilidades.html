@@ -10,9 +10,7 @@
     <div class="header">
         <div class="header-content container">
             <div class="logo-section">
-                <h1>🎮 <span>Class</span>Craft</h1>
-                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
-                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em; display: block; margin-top: 8px;"></span>
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px;">
             </div>
             <div class="auth-buttons">
                 <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
@@ -138,8 +136,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
-            
             await verificarYCargarDatos();
             setupFiltros();
         });
@@ -191,7 +187,7 @@
             statsElement.innerHTML = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: center;">
                     <div>
-                        <h4 style="color: #4a5568; margin-bottom: 10px;">${p.nombre}</h4>
+                        <h4 style="color: #4a5568; margin-bottom: 10px;">${p.usuario_id?.nombre || currentUser.nombre || 'Personaje'}</h4>
                         <p><strong>Clase:</strong> ${p.clase_personaje_id.nombre}</p>
                         <p><strong>Raza:</strong> ${p.raza_id.nombre}</p>
                         <p><strong>Nivel:</strong> ${p.nivel}</p>

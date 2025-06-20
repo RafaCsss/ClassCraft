@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Endpoint Simple</title>
+</head>
+<body>
+    <h1>🔥 TEST ENDPOINT SIMPLE</h1>
+    <p>Probando endpoint desde cero sin populate, construyendo manualmente</p>
+    
+    <button onclick="testEndpoint()">🚀 Probar /api/equipos-simple/simple</button>
+    
+    <div id="resultados" style="margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+        <h3>Resultados:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        async function testEndpoint() {
+            const output = document.getElementById('output');
+            output.textContent = 'Cargando...';
+            
+            try {
+                // Obtener token (simular login como profesor)
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'profesor@test.com',
+                        password: '123456'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                console.log('Login response:', loginData);
+                
+                // Obtener token del localStorage si existe, o usar respuesta de login
+                const token = localStorage.getItem('classcraft_token') || 'fake-token';
+                
+                // Probar endpoint simple
+                const response = await fetch('/api/equipos-simple/simple?clase_id=6854b036e4212186f38fc53c', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                console.log('🎯 RESULTADO ENDPOINT SIMPLE:');
+                console.log('Status:', response.status);
+                console.log('Data:', data);
+                
+                // Verificar tipos de los IDs
+                if (data.equipos && data.equipos.length > 0) {
+                    const primerEquipo = data.equipos[0];
+                    console.log('🔍 VERIFICACIÓN DE TIPOS:');
+                    console.log(`Equipo ID: "${primerEquipo.id}" (tipo: ${typeof primerEquipo.id})`);
+                    
+                    if (primerEquipo.miembros && primerEquipo.miembros.length > 0) {
+                        const primerMiembro = primerEquipo.miembros[0];
+                        console.log(`Miembro ID: "${primerMiembro.id}" (tipo: ${typeof primerMiembro.id})`);
+                        console.log(`Usuario ID: "${primerMiembro.usuario_id}" (tipo: ${typeof primerMiembro.usuario_id})`);
+                    }
+                }
+                
+                output.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                console.error('❌ ERROR:', error);
+                output.textContent = `ERROR: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

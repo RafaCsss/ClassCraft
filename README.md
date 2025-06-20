@@ -1,5 +1,7 @@
 # ClassCraft - Educational RPG System
 
+**Current Version: v0.9.0**
+
 RPG-based gamification system for classrooms. Students create characters with classes and races, use abilities, form teams, and gain experience by completing tasks.
 
 ## Quick Start

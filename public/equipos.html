@@ -10,13 +10,35 @@
     <div class="header">
         <div class="header-content container">
             <div class="logo-section">
-                <h1>🎮 <span>Class</span>Craft</h1>
-                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
-                <span id="titulo-equipos" style="color: #4a5568; font-size: 1.1em; display: block; margin-top: 8px;">⚔️ Equipos</span>
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px;">
             </div>
             <div class="auth-buttons">
                 <a href="/dashboard.html" class="btn btn-secondary">Dashboard</a>
                 <button onclick="logout()" class="btn btn-secondary">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Tips -->
+    <div class="container">
+        <div class="card tips-section">
+            <h3>⚔️ Estrategias de Equipos</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <span class="tip-icon">🛡️</span>
+                    <h4>Balance de Clases</h4>
+                    <p>Un equipo balanceado con diferentes clases (Mago, Guerrero, Curandero) tiene mejores posibilidades de éxito en misiones complejas.</p>
+                </div>
+                <div class="tip-card">
+                    <span class="tip-icon">🎯</span>
+                    <h4>Cooperación</h4>
+                    <p>Los equipos que trabajan juntos y se apoyan mutuamente obtienen bonificaciones especiales en XP y recursos.</p>
+                </div>
+                <div class="tip-card">
+                    <span class="tip-icon">📈</span>
+                    <h4>Progreso Constante</h4>
+                    <p>La participación regular de todos los miembros es clave para mantener al equipo en los primeros lugares del ranking.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -30,7 +52,6 @@
                 <select id="selectorClase" class="form-select" style="min-width: 200px;">
                     <option value="">Todos los equipos</option>
                 </select>
-                <button onclick="cambiarClase()" class="btn btn-primary">Cambiar Vista</button>
                 <span id="claseActualInfo" class="badge badge-info"></span>
             </div>
         </div>
@@ -75,7 +96,7 @@
                         <select id="clase-equipo" class="form-select">
                             <option value="">Equipo Global (sin clase específica)</option>
                         </select>
-                        <small class="form-help">Los equipos globales pueden incluir estudiantes de cualquier clase</small>
+                        <small id="form-help-text" class="form-help">Los equipos globales pueden incluir estudiantes de cualquier clase</small>
                     </div>
                     
                     <div class="form-group">
@@ -199,8 +220,24 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             verificarAuth();
+            
+            // Detectar si viene de gestionar-clase con clase_id
+            const urlParams = new URLSearchParams(window.location.search);
+            const claseIdFromUrl = urlParams.get('clase_id');
+            
+            if (claseIdFromUrl) {
+                // Pre-seleccionar la clase en el selector
+                preseleccionarClase(claseIdFromUrl);
+            }
+            
             inicializarPagina();
         });
+
+        function preseleccionarClase(claseId) {
+            // Guardar la clase pre-seleccionada para cuando se carguen las opciones
+            claseSeleccionada = claseId;
+            console.log('🎯 Pre-seleccionando clase:', claseId);
+        }
 
         function verificarAuth() {
             const token = localStorage.getItem('classcraft_token');
@@ -217,7 +254,6 @@
         async function inicializarPagina() {
             if (userRole === 'profesor') {
                 document.getElementById('panel-profesor').style.display = 'block';
-                document.getElementById('titulo-equipos').textContent = '⚔️ Gestión de Equipos';
                 document.getElementById('claseSelectorContainer').style.display = 'block';
                 await cargarClasesProfesor();
             } else {
@@ -250,6 +286,8 @@
                 }
 
                 const data = await response.json();
+                
+                console.log('🔍 DEBUG - verificarEquipoEstudiante response:', data);
                 clasesDisponibles = data.clases;
                 
                 // Llenar selectores
@@ -288,21 +326,46 @@
                     selectorClase.appendChild(option);
                 });
                 
+                // Si hay una clase pre-seleccionada, establecerla
+                if (claseSeleccionada) {
+                    console.log('🎯 Aplicando selección automática de clase para estudiante:', claseSeleccionada);
+                    selectorClase.value = claseSeleccionada;
+                    actualizarInfoClaseActual();
+                }
+                
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
         function llenarSelectoresClases() {
+            console.log('🔍 DEBUG llenarSelectoresClases - clasesDisponibles:', clasesDisponibles);
+            
             // Selector principal
             const selectorClase = document.getElementById('selectorClase');
             selectorClase.innerHTML = '<option value="">Todos mis equipos</option>';
             
             // Selector del modal crear equipo
             const claseEquipo = document.getElementById('clase-equipo');
-            claseEquipo.innerHTML = '<option value="">Equipo Global (sin clase específica)</option>';
+            const helpText = document.getElementById('form-help-text');
+            
+            // NUEVA LÓGICA: Si hay una clase pre-seleccionada (viene de gestionar-clase),
+            // no mostrar opción global
+            const vieneDeGestionarClase = claseSeleccionada !== null;
+            
+            if (vieneDeGestionarClase) {
+                // Solo mostrar las clases disponibles, sin opción global
+                claseEquipo.innerHTML = '';
+                helpText.textContent = 'Selecciona la clase para crear el equipo';
+            } else {
+                // Comportamiento normal: incluir opción global
+                claseEquipo.innerHTML = '<option value="">Equipo Global (sin clase específica)</option>';
+                helpText.textContent = 'Los equipos globales pueden incluir estudiantes de cualquier clase';
+            }
             
             clasesDisponibles.forEach(clase => {
+                console.log('🔍 Agregando clase al selector:', { id: clase.id, nombre: clase.nombre, codigo: clase.codigo });
+                
                 // Selector principal
                 const option1 = document.createElement('option');
                 option1.value = clase.id;
@@ -315,11 +378,31 @@
                 option2.textContent = `${clase.nombre} (${clase.codigo})`;
                 claseEquipo.appendChild(option2);
             });
+            
+            // Si hay una clase pre-seleccionada, establecerla
+            if (claseSeleccionada) {
+                console.log('🎯 Aplicando selección automática de clase:', claseSeleccionada);
+                selectorClase.value = claseSeleccionada;
+                
+                // NUEVO: También pre-seleccionar en el modal de crear equipo
+                claseEquipo.value = claseSeleccionada;
+                
+                // Activar el cambio automáticamente
+                actualizarInfoClaseActual();
+            }
+            
+            console.log('🔍 Opciones finales en selector:', selectorClase.children.length);
         }
 
         function cambiarClase() {
             const selector = document.getElementById('selectorClase');
             claseSeleccionada = selector.value || null;
+            
+            console.log('🔍 DEBUG - cambiarClase():', {
+                selectorValue: selector.value,
+                claseSeleccionada: claseSeleccionada,
+                clasesDisponibles: clasesDisponibles
+            });
             
             actualizarInfoClaseActual();
             cargarEquipos();
@@ -356,15 +439,23 @@
                 e.preventDefault();
                 await gestionarPuntos();
             });
+            
+            // NUEVO: Cambio automático al seleccionar clase
+            document.getElementById('selectorClase').addEventListener('change', function() {
+                console.log('🔍 Selector de clase cambiado automáticamente');
+                cambiarClase();
+            });
         }
 
         async function cargarEquipos() {
             try {
                 const token = localStorage.getItem('classcraft_token');
                 
-                // Construir URL con parámetros
-                let url = '/api/equipos/';
+                // USAR RUTAS V2 para soporte equipos por clase
+                let url = '/api/equipos/v2';
                 const params = new URLSearchParams();
+                
+                console.log('🔍 DEBUG cargarEquipos - claseSeleccionada:', claseSeleccionada);
                 
                 if (claseSeleccionada) {
                     params.append('clase_id', claseSeleccionada);
@@ -373,6 +464,8 @@
                 if (params.toString()) {
                     url += '?' + params.toString();
                 }
+                
+                console.log('🔍 DEBUG cargarEquipos - URL final:', url);
                 
                 const response = await fetch(url, {
                     headers: {
@@ -385,6 +478,9 @@
                 }
 
                 const data = await response.json();
+                
+                console.log('🔍 DEBUG cargarEquipos - Response:', data);
+                
                 equipos = data.equipos;
                 
                 // Mostrar mensaje informativo si existe
@@ -403,6 +499,8 @@
         function mostrarEquipos(equiposList) {
             const grid = document.getElementById('equipos-grid');
             grid.innerHTML = '';
+            
+            console.log('🔍 DEBUG mostrarEquipos - Equipos recibidos:', equiposList.length, equiposList);
 
             if (equiposList.length === 0) {
                 grid.innerHTML = '<p class="empty-state">⚔️ No hay equipos disponibles</p>';
@@ -416,13 +514,6 @@
         }
 
         function crearTarjetaEquipo(equipo) {
-            console.log('🔍 Creando tarjeta para equipo:', {
-                nombre: equipo.nombre,
-                id: equipo.id,
-                _id: equipo._id,
-                id_length: equipo.id ? equipo.id.length : 'undefined',
-                _id_length: equipo._id ? equipo._id.length : 'undefined'
-            });
             
             const div = document.createElement('div');
             div.className = 'equipo-card';
@@ -430,7 +521,10 @@
             // Determinar acciones según rol y tipo de equipo
             let accionesHTML = '';
             if (userRole === 'profesor') {
-                accionesHTML = `<button onclick="gestionarPuntosEquipo('${equipo.id || equipo._id}')" class="btn btn-sm btn-warning">💰 Puntos</button>`;
+                accionesHTML = `
+                    <button onclick="gestionarPuntosEquipo('${equipo.id || equipo._id}')" class="btn btn-sm btn-warning">💰 Puntos</button>
+                    <button onclick="eliminarEquipo('${equipo.id || equipo._id}', '${equipo.nombre}')" class="btn btn-sm btn-danger">🗑️ Eliminar</button>
+                `;
             } else if (equipo.puede_unirse && equipo.espacios_disponibles > 0) {
                 accionesHTML = `<button onclick="unirseAEquipo('${equipo.id || equipo._id}')" class="btn btn-sm btn-success">➕ Unirse</button>`;
             } else if (equipo.espacios_disponibles === 0) {
@@ -441,13 +535,13 @@
             
             // Información de clase/tipo
             let tipoEquipoHTML = '';
-            if (equipo.tipo_equipo === 'clase' && equipo.clase_info) {
+            if (equipo.clase_info) {
                 tipoEquipoHTML = `
                     <div class="equipo-tipo" style="margin: 8px 0;">
-                        <span class="badge badge-primary">🏷️ ${equipo.clase_info.nombre} (${equipo.clase_info.codigo})</span>
+                        <span class="badge badge-primary">🏷️ ${equipo.clase_info.nombre}</span>
                     </div>
                 `;
-            } else if (equipo.tipo_equipo === 'global') {
+            } else {
                 tipoEquipoHTML = `
                     <div class="equipo-tipo" style="margin: 8px 0;">
                         <span class="badge badge-secondary">🌐 Equipo Global</span>
@@ -458,7 +552,7 @@
             div.innerHTML = `
                 <div class="equipo-header">
                     <h4>${equipo.nombre}</h4>
-                    <span class="profesor">👨‍🏫 ${equipo.profesor_id?.nombre || 'Profesor'}</span>
+                    <span class="profesor">👨‍🏫 ${equipo.profesor_info?.nombre || 'Profesor'}</span>
                 </div>
                 ${tipoEquipoHTML}
                 <div class="equipo-stats">
@@ -488,7 +582,8 @@
         async function verificarEquipoEstudiante() {
             try {
                 const token = localStorage.getItem('classcraft_token');
-                const response = await fetch('/api/equipos/?mi_equipo=true', {
+                // USAR RUTA V2 para ver todos los equipos del estudiante
+                const response = await fetch('/api/equipos/mis-equipos-v2', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -496,10 +591,14 @@
 
                 const data = await response.json();
                 
-                if (data.equipos.length > 0) {
-                    equipoActual = data.equipos[0];
-                    mostrarInfoMiEquipo(equipoActual);
-                    document.getElementById('btn-salir-equipo').style.display = 'inline-block';
+                console.log('🔍 DEBUG - verificarEquipoEstudiante response:', data);
+                
+                if (data.equipos && data.equipos.length > 0) {
+                    // Mostrar el primer equipo o un resumen
+                    console.log('🔍 Equipos encontrados:', data.equipos.length);
+                    const primerEquipo = data.equipos[0];
+                    mostrarInfoMisEquipos(data.equipos);
+                    document.getElementById('btn-salir-equipo').style.display = 'none'; // SIEMPRE OCULTAR botón legacy
                 } else {
                     document.getElementById('mi-equipo-info').innerHTML = 
                         '<p class="no-equipo">🚫 No perteneces a ningún equipo</p>';
@@ -507,19 +606,63 @@
 
             } catch (error) {
                 console.error('Error al verificar equipo:', error);
+                document.getElementById('mi-equipo-info').innerHTML = 
+                    '<p class="no-equipo">❌ Error al cargar equipos</p>';
+                document.getElementById('btn-salir-equipo').style.display = 'none';
             }
         }
 
-        function mostrarInfoMiEquipo(equipo) {
-            document.getElementById('mi-equipo-info').innerHTML = `
-                <div class="mi-equipo-card">
-                    <h4>${equipo.nombre}</h4>
-                    <div class="equipo-stats-mini">
-                        <span>👥 ${equipo.cantidad_miembros}/4</span>
-                        <span>🏆 ${equipo.puntos} pts</span>
+        function mostrarInfoMisEquipos(equipos) {
+            const container = document.getElementById('mi-equipo-info');
+            
+            if (equipos.length === 1) {
+                // Un solo equipo - mostrar con el mismo estilo que múltiples equipos
+                const equipo = equipos[0];
+                container.innerHTML = `
+                    <div class="mis-equipos-resumen">
+                        <h4>🏆 Mi Equipo</h4>
+                        <div class="equipos-lista-mini">
+                            <div class="equipo-item">
+                                <div class="equipo-info">
+                                    <div class="equipo-nombre">${equipo.nombre}</div>
+                                    <div class="equipo-detalles">
+                                        <span class="clase-tag">${equipo.clase_info ? `🏷️ ${equipo.clase_info.nombre}` : '🌐 Global'}</span>
+                                        <span class="puntos-tag">🏆 ${equipo.puntos}pts</span>
+                                        <span class="miembros-tag">👥 ${equipo.miembros}/4</span>
+                                    </div>
+                                </div>
+                                <div class="equipo-acciones">
+                                    <button onclick="salirDeEquipoEspecifico('${equipo.id}', '${equipo.clase_info ? equipo.clase_info.id : ''}')" class="btn btn-xs btn-danger">🚪 Salir</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // Múltiples equipos - mostrar lista mejorada
+                container.innerHTML = `
+                    <div class="mis-equipos-resumen">
+                        <h4>🏆 Mis Equipos (${equipos.length})</h4>
+                        <div class="equipos-lista-mini">
+                            ${equipos.map(equipo => `
+                                <div class="equipo-item">
+                                    <div class="equipo-info">
+                                        <div class="equipo-nombre">${equipo.nombre}</div>
+                                        <div class="equipo-detalles">
+                                            <span class="clase-tag">${equipo.clase_info ? `🏷️ ${equipo.clase_info.nombre}` : '🌐 Global'}</span>
+                                            <span class="puntos-tag">🏆 ${equipo.puntos}pts</span>
+                                            <span class="miembros-tag">👥 ${equipo.miembros}/4</span>
+                                        </div>
+                                    </div>
+                                    <div class="equipo-acciones">
+                                        <button onclick="salirDeEquipoEspecifico('${equipo.id}', '${equipo.clase_info ? equipo.clase_info.id : ''}')" class="btn btn-xs btn-danger">🚪</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function mostrarCrearEquipo() {
@@ -583,7 +726,8 @@
                 console.log('🔍 Frontend - Enviando equipoId:', equipoId, 'Longitud:', equipoId.length);
                 
                 const token = localStorage.getItem('classcraft_token');
-                const response = await fetch(`/api/equipos/${equipoId}/unirse`, {
+                // USAR RUTA V2 para soporte equipos por clase
+                const response = await fetch(`/api/equipos/${equipoId}/unirse-v2`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -607,40 +751,83 @@
         }
 
         async function salirDeEquipo() {
-            if (!equipoActual) {
-                alert('No perteneces a ningún equipo');
-                return;
-            }
+            // Función legacy - redirigir a nueva función
+            alert('📝 Usa los botones individuales para salir de equipos específicos');
+        }
 
-            if (!confirm(`¿Estás seguro de que quieres salir del equipo "${equipoActual.nombre}"?`)) {
-                return;
-            }
-
+        async function salirDeEquipoEspecifico(equipoId, claseId) {
             try {
                 const token = localStorage.getItem('classcraft_token');
-                const response = await fetch('/api/equipos/salir', {
+                
+                console.log('🔍 DEBUG - Salir de equipo:', { equipoId, claseId });
+                
+                // Obtener información del equipo para confirmación
+                const equipoInfo = await obtenerInfoEquipo(equipoId);
+                if (!equipoInfo) {
+                    alert('❌ Equipo no encontrado');
+                    return;
+                }
+                
+                const contexto = claseId && claseId !== '' ? `en la clase ${equipoInfo.clase_nombre}` : 'global';
+                if (!confirm(`¿Estás seguro de que quieres salir del equipo "${equipoInfo.nombre}" ${contexto}?`)) {
+                    return;
+                }
+
+                // Preparar datos para salir - SOLO enviar clase_id si no está vacío
+                const requestBody = (claseId && claseId !== '') ? { clase_id: claseId } : {};
+                
+                console.log('🔍 REQUEST BODY:', requestBody);
+                
+                const response = await fetch('/api/equipos/salir-v2', {
                     method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
-                    }
+                    },
+                    body: JSON.stringify(requestBody)
                 });
 
                 const result = await response.json();
                 
+                console.log('🔍 RESPONSE:', result);
+                
                 if (response.ok) {
                     alert('✅ ' + result.message);
-                    equipoActual = null;
-                    document.getElementById('btn-salir-equipo').style.display = 'none';
-                    document.getElementById('mi-equipo-info').innerHTML = 
-                        '<p class="no-equipo">🚫 No perteneces a ningún equipo</p>';
-                    cargarEquipos();
+                    await verificarEquipoEstudiante();
+                    await cargarEquipos();
                 } else {
+                    console.error('❌ Error del servidor:', result);
                     alert('❌ ' + result.error);
                 }
 
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al salir del equipo');
+                console.error('❌ Error en salirDeEquipoEspecifico:', error);
+                alert('Error al salir del equipo: ' + error.message);
+            }
+        }
+
+        async function obtenerInfoEquipo(equipoId) {
+            try {
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch('/api/equipos/v2', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                const equipo = data.equipos.find(e => e.id === equipoId || e._id === equipoId);
+                
+                if (equipo) {
+                    return {
+                        nombre: equipo.nombre,
+                        clase_nombre: equipo.clase_info ? equipo.clase_info.nombre : null
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Error obteniendo info equipo:', error);
+                return null;
             }
         }
 
@@ -733,6 +920,35 @@
             }
         }
 
+        async function eliminarEquipo(equipoId, nombreEquipo) {
+            try {
+                if (!confirm(`¿Estás seguro de que quieres eliminar el equipo "${nombreEquipo}"?\n\n⚠️ ATENCIÓN: Esta acción es irreversible y todos los miembros serán removidos del equipo.`)) {
+                    return;
+                }
+
+                const token = localStorage.getItem('classcraft_token');
+                const response = await fetch(`/api/equipos/${equipoId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ ${result.message}`);
+                    await cargarEquipos();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar equipo: ' + error.message);
+            }
+        }
+
         function mostrarRanking(data) {
             const container = document.getElementById('ranking-container');
             const ranking = data.ranking;
@@ -809,7 +1025,10 @@
             const modales = ['modal-crear-equipo', 'modal-puntos', 'modal-ranking'];
             modales.forEach(modalId => {
                 const modal = document.getElementById(modalId);
-                if (event.target === modal) {
+                const modalContent = modal.querySelector('.modal-content');
+                
+                // Solo cerrar si el click es directamente en el modal (fondo), no en el contenido
+                if (event.target === modal && !modalContent.contains(event.target)) {
                     cerrarModal(modalId);
                 }
             });
@@ -905,6 +1124,330 @@
         .btn-sm {
             padding: 6px 12px;
             font-size: 0.85em;
+        }
+        
+        /* Nuevos estilos para cards de equipos más limpias */
+        .equipos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 0;
+            margin-top: 20px;
+        }
+        
+        .equipos-lista {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .equipos-header {
+            margin-bottom: 20px;
+            z-index: 2;
+            position: relative;
+        }
+        
+        .equipo-card {
+            background: rgba(245, 235, 215, 0.85);
+            border: 2px solid rgba(205, 133, 63, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+        
+        .equipo-card:hover {
+            border-color: #CD853F;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.2);
+            z-index: 3;
+            position: relative;
+        }
+        
+        .equipo-header {
+            margin-bottom: 15px;
+        }
+        
+        .equipo-header h4 {
+            color: #2F1B14;
+            font-size: 1.3em;
+            margin: 0 0 8px 0;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);
+        }
+        
+        .equipo-header .profesor {
+            color: #8B4513;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .equipo-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .equipo-stats .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(245, 235, 215, 0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(205, 133, 63, 0.2);
+        }
+        
+        .equipo-stats .stat .label {
+            color: #8B4513;
+            font-size: 0.9em;
+        }
+        
+        .equipo-stats .stat .value {
+            color: #2F1B14;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .equipo-miembros {
+            margin: 15px 0;
+        }
+        
+        .equipo-miembros .miembro {
+            display: inline-block;
+            background: rgba(210, 105, 30, 0.1);
+            color: #8B4513;
+            padding: 4px 8px;
+            margin: 2px 4px 2px 0;
+            border-radius: 12px;
+            font-size: 0.85em;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+        }
+        
+        .equipo-actions {
+            text-align: center;
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .equipo-actions .btn {
+            min-width: 100px;
+            flex: 1;
+        }
+        
+        .equipo-actions .btn-sm {
+            min-width: 80px;
+            padding: 6px 10px;
+            font-size: 0.8em;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #2F1B14;
+            font-size: 1.1em;
+            padding: 40px 20px;
+            background: rgba(245, 235, 215, 0.95);
+            border: 4px solid #CD853F;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        /* Badges mejorados */
+        .badge {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .badge-primary {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+        }
+        
+        .badge-secondary {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+        }
+        
+        /* Estilos para múltiples equipos V2 */
+        .mis-equipos-resumen {
+            background: rgba(245, 235, 215, 0.9);
+            border: 1px solid #CD853F;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .equipo-mini {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(205, 133, 63, 0.2);
+        }
+        
+        .equipo-mini:last-child {
+            border-bottom: none;
+        }
+        
+        .equipo-mini .nombre {
+            font-weight: bold;
+            color: #2F1B14;
+        }
+        
+        .equipo-mini .clase {
+            font-size: 0.85em;
+            color: #8B4513;
+            background: rgba(210, 105, 30, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .equipo-mini .puntos {
+            font-weight: bold;
+            color: #DAA520;
+        }
+        
+        .clase-info {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #8B4513;
+            padding: 4px 8px;
+            background: rgba(210, 105, 30, 0.1);
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        /* Estilos mejorados para múltiples equipos */
+        .equipos-lista-mini {
+            margin-top: 15px;
+        }
+        
+        .equipo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(245, 235, 215, 0.7);
+            border: 1px solid rgba(205, 133, 63, 0.3);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .equipo-item:hover {
+            background: rgba(245, 235, 215, 0.9);
+            border-color: #CD853F;
+            transform: translateX(3px);
+        }
+        
+        .equipo-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .equipo-info {
+            flex: 1;
+        }
+        
+        .equipo-nombre {
+            font-weight: bold;
+            color: #2F1B14;
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+        
+        .equipo-detalles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .clase-tag, .puntos-tag, .miembros-tag {
+            font-size: 0.8em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .clase-tag {
+            background: rgba(66, 153, 225, 0.2);
+            color: #2B6CB0;
+            border: 1px solid rgba(66, 153, 225, 0.3);
+        }
+        
+        .puntos-tag {
+            background: rgba(218, 165, 32, 0.2);
+            color: #B7791F;
+            border: 1px solid rgba(218, 165, 32, 0.3);
+        }
+        
+        .miembros-tag {
+            background: rgba(72, 187, 120, 0.2);
+            color: #2F855A;
+            border: 1px solid rgba(72, 187, 120, 0.3);
+        }
+        
+        .equipo-acciones {
+            margin-left: 15px;
+        }
+        
+        .btn-xs {
+            padding: 4px 8px;
+            font-size: 0.75em;
+            border-radius: 4px;
+            min-width: auto;
+        }
+        
+        .btn-xs:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Estilos para sección de tips */
+        .tips-section {
+            margin: 30px 0;
+        }
+        
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .tip-card {
+            background: rgba(222, 184, 135, 0.6);
+            border: 2px solid rgba(205, 133, 63, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .tip-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.3);
+            border-color: #CD853F;
+        }
+        
+        .tip-icon {
+            font-size: 2.5em;
+            display: block;
+            margin-bottom: 15px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+        
+        .tip-card h4 {
+            color: #2F1B14;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .tip-card p {
+            color: #8B4513;
+            line-height: 1.5;
+            margin: 0;
         }
     </style>
 </body>

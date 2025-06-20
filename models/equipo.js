@@ -69,7 +69,23 @@ const equipoSchema = new mongoose.Schema({
     }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  // 🔧 FIX: Transform para convertir ObjectIds a strings en JSON
+  toJSON: {
+    transform: function(doc, ret) {
+      // Convertir _id y otros ObjectIds a strings
+      if (ret._id) ret._id = ret._id.toString();
+      if (ret.profesor_id) ret.profesor_id = ret.profesor_id.toString();
+      if (ret.clase_id) ret.clase_id = ret.clase_id.toString();
+      
+      // Convertir array de miembros (ObjectIds) a strings
+      if (ret.miembros && Array.isArray(ret.miembros)) {
+        ret.miembros = ret.miembros.map(id => id.toString());
+      }
+      
+      return ret;
+    }
+  }
 });
 
 // Método para agregar miembro

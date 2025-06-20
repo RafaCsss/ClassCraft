@@ -10,8 +10,7 @@
     <div class="header">
         <div class="header-content container">
             <div class="logo-section">
-                <h1>🎮 <span>Class</span>Craft</h1>
-                <p style="color: #8B4513; margin-top: 5px; font-size: 1.1em;">Sistema RPG Educativo - Convierte tu clase en una aventura</p>
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px; margin-left: 120px;">
             </div>
             <div class="auth-buttons">
                 <a href="/dashboard.html" class="btn btn-secondary">Dashboard</a>
@@ -37,12 +36,27 @@
                 </div>
             </div>
 
-            <form id="createPersonajeForm" style="max-width: 600px; margin: 0 auto;">
+            <form id="createPersonajeForm">
                 <div class="form-group">
-                    <label for="clasePersonaje">Clase de Personaje:</label>
-                    <select id="clasePersonaje" required>
-                        <option value="">Selecciona una clase...</option>
-                    </select>
+                    <label>Clase de Personaje:</label>
+                    <div class="character-selector">
+                        <div class="character-option" data-clase-id="" id="mago-option">
+                            <img src="/images/Magom.png" alt="Mago" class="character-image">
+                            <h4>Mago</h4>
+                            <p class="character-desc">Maestro de la magia</p>
+                        </div>
+                        <div class="character-option" data-clase-id="" id="guerrero-option">
+                            <img src="/images/Guerrero de frente.png" alt="Guerrero" class="character-image">
+                            <h4>Guerrero</h4>
+                            <p class="character-desc">Tanque resistente</p>
+                        </div>
+                        <div class="character-option" data-clase-id="" id="curandero-option">
+                            <img src="/images/Curanderom de lado derecho.png" alt="Curandero" class="character-image">
+                            <h4>Curandero</h4>
+                            <p class="character-desc">Sanador del equipo</p>
+                        </div>
+                    </div>
+                    <input type="hidden" id="clasePersonaje" required>
                     <div id="claseInfo" style="margin-top: 10px; padding: 10px; background: rgba(245, 235, 215, 0.7); border: 2px solid #CD853F; border-radius: 8px; display: none;">
                         <div id="claseDescripcion"></div>
                     </div>
@@ -62,11 +76,17 @@
                     <h4 style="color: #2F1B14; margin-bottom: 15px; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.3);">📊 Stats Calculadas</h4>
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <span class="stat-value" id="previewSalud">-</span>
+                            <span class="stat-value">
+                                <img src="/images/icono vida.png" alt="Vida" class="stat-icon" style="width: 40px; height: 40px; margin-right: 5px; vertical-align: middle;">
+                                <span id="previewSalud">-</span>
+                            </span>
                             <span class="stat-label">Salud Inicial</span>
                         </div>
                         <div class="stat-card">
-                            <span class="stat-value" id="previewEnergia">-</span>
+                            <span class="stat-value">
+                                <img src="/images/icono energia.png" alt="Energía" class="stat-icon" style="width: 40px; height: 40px; margin-right: 5px; vertical-align: middle;">
+                                <span id="previewEnergia">-</span>
+                            </span>
                             <span class="stat-label">Energía Inicial</span>
                         </div>
                     </div>
@@ -185,11 +205,17 @@
                 clasesData = await getClasesPersonaje();
                 const claseSelect = document.getElementById('clasePersonaje');
                 
+                // Actualizar los data-clase-id de las opciones de personaje
                 clasesData.forEach(clase => {
-                    const option = document.createElement('option');
-                    option.value = clase._id;
-                    option.textContent = clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1);
-                    claseSelect.appendChild(option);
+                    const optionElement = document.getElementById(`${clase.nombre.toLowerCase()}-option`);
+                    if (optionElement) {
+                        optionElement.setAttribute('data-clase-id', clase._id);
+                        // Actualizar descripciones
+                        const descElement = optionElement.querySelector('.character-desc');
+                        if (descElement) {
+                            descElement.textContent = clase.descripcion;
+                        }
+                    }
                 });
 
                 // Cargar razas
@@ -236,9 +262,26 @@
             }
         }
 
-        // Event listeners para mostrar información
-        document.getElementById('clasePersonaje').addEventListener('change', (e) => {
-            const claseId = e.target.value;
+        // Event listeners para selección de personaje
+        document.querySelectorAll('.character-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // Remover selección anterior
+                document.querySelectorAll('.character-option').forEach(opt => opt.classList.remove('selected'));
+                
+                // Seleccionar nueva opción
+                option.classList.add('selected');
+                
+                // Actualizar input hidden
+                const claseId = option.getAttribute('data-clase-id');
+                document.getElementById('clasePersonaje').value = claseId;
+                
+                // Mostrar información de la clase
+                showClaseInfo(claseId);
+                updateStatsPreview();
+            });
+        });
+        
+        function showClaseInfo(claseId) {
             const claseInfo = document.getElementById('claseInfo');
             const claseDescripcion = document.getElementById('claseDescripcion');
             
@@ -253,9 +296,7 @@
             } else {
                 claseInfo.style.display = 'none';
             }
-            
-            updateStatsPreview();
-        });
+        }
 
         document.getElementById('raza').addEventListener('change', (e) => {
             const razaId = e.target.value;

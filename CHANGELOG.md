@@ -2,7 +2,45 @@
 
 Todas las actualizaciones importantes del proyecto ClassCraft se documentan aquí.
 
-## [1.1.0] - 2024-12-18
+## [0.9.0] - 2024-12-20
+
+### ✨ Nuevo
+- Sistema de equipos completamente rediseñado y funcional
+- Vista visual mejorada para equipos con cards estilo medieval
+- Nuevo logo CLASSCRAFT implementado en header
+- Fondo temático agregado a toda la aplicación
+- Selección visual de clases y razas con imágenes clickeables
+- Interfaz de creación de personaje completamente renovada
+
+### 🎨 UI/UX
+- Header optimizado con logo centrado a 350px
+- Eliminación de padding innecesario en header para diseño compacto
+- Background medieval aplicado globalmente
+- Cards de equipos con diseño cohesivo y responsivo
+- Selección de clase/raza ahora con preview visual en tiempo real
+- Transiciones suaves en selección de opciones
+
+### 🔧 Técnico
+- Funcionalidad de equipos debuggeada y estabilizada
+- Validaciones mejoradas para límite de 4 miembros por equipo
+- Sistema de imágenes para clases y razas implementado
+- Layout responsive mejorado para móviles
+- Optimización del CSS para mejor rendimiento
+
+### 🐛 Corregido
+- Bugs en la gestión de equipos solucionados
+- Problemas de visualización en diferentes resoluciones
+- Errores en la validación de creación de personajes
+
+### 🚧 Pendiente para v1.0
+- Sistema completo de habilidades (solo 1 funcional actualmente)
+- Sistema de inventario e items
+- Mecánicas de combate y efectos
+- Sistema de misiones completo
+
+---
+
+## [0.8.x] - Versiones Anteriores
 
 ### ✨ Nuevo
 - Sistema de alertas CSS con animaciones slideIn/slideOut implementado

@@ -49,7 +49,7 @@ router.post('/crear', verificarToken, soloProfesor, async (req, res) => {
         res.status(201).json({
             mensaje: 'Clase creada exitosamente',
             clase: {
-                id: nuevaClase._id,
+                id: nuevaClase._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: nuevaClase.nombre,
                 codigo: nuevaClase.codigo_clase,
                 descripcion: nuevaClase.descripcion,
@@ -94,7 +94,7 @@ router.post('/unirse/:codigo', verificarToken, async (req, res) => {
         res.json({
             mensaje: 'Te has unido a la clase exitosamente',
             clase: {
-                id: clase._id,
+                id: clase._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: clase.nombre,
                 codigo: clase.codigo_clase,
                 descripcion: clase.descripcion,
@@ -127,7 +127,7 @@ router.get('/mis-clases', verificarToken, async (req, res) => {
                 }).countDocuments();
 
                 return {
-                    id: clase._id,
+                    id: clase._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                     nombre: clase.nombre,
                     codigo: clase.codigo_clase,
                     descripcion: clase.descripcion,
@@ -152,7 +152,7 @@ router.get('/mis-clases', verificarToken, async (req, res) => {
             }).populate('profesor_id', 'nombre email');
 
             const clasesEstudiante = clases.map(clase => ({
-                id: clase._id,
+                id: clase._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: clase.nombre,
                 codigo: clase.codigo_clase,
                 descripcion: clase.descripcion,
@@ -200,13 +200,14 @@ router.get('/:id/estudiantes', verificarToken, async (req, res) => {
                     .populate('equipo_id', 'nombre');
 
                 return {
-                    _id: estudiante._id,
+                    _id: estudiante._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                     nombre: estudiante.nombre,
                     email: estudiante.email,
                     nivel: estudiante.nivel,
                     experiencia: estudiante.experiencia,
                     ultima_conexion: estudiante.ultima_conexion,
                     personaje: personaje ? {
+                        _id: personaje._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                         clase: personaje.clase_personaje_id?.nombre,
                         raza: personaje.raza_id?.nombre,
                         salud: {
@@ -218,7 +219,7 @@ router.get('/:id/estudiantes', verificarToken, async (req, res) => {
                             maxima: personaje.energia_maxima
                         },
                         equipo: personaje.equipo_id?.nombre || 'Sin equipo',
-                        equipo_id: personaje.equipo_id?._id
+                        equipo_id: personaje.equipo_id?._id?.toString() // 🔧 FIX: Convertir ObjectId a string
                     } : null
                 };
             })
@@ -226,12 +227,12 @@ router.get('/:id/estudiantes', verificarToken, async (req, res) => {
 
         res.json({
             clase: {
-                id: clase._id,
+                id: clase._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: clase.nombre,
                 codigo: clase.codigo_clase,
                 descripcion: clase.descripcion
             },
-            estudiantes: estudiantesConPersonajes,
+            estudiantes: JSON.parse(JSON.stringify(estudiantesConPersonajes)), // 🔧 FORZAR SERIALIZACIÓN
             configuracion: clase.configuracion
         });
 
@@ -460,6 +461,57 @@ router.put('/:id/configuracion', verificarToken, soloProfesor, async (req, res) 
     } catch (error) {
         console.error('Error actualizando configuración:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// DELETE /api/clases/:id - Eliminar clase (solo profesor dueño)
+router.delete('/:id', verificarToken, soloProfesor, async (req, res) => {
+    try {
+        const clase = await Clase.findById(req.params.id)
+            .populate('estudiantes', 'nombre')
+            .populate('profesor_id', 'nombre');
+            
+        if (!clase) {
+            return res.status(404).json({ error: 'Clase no encontrada' });
+        }
+
+        // Verificar que el profesor sea el dueño de la clase
+        if (clase.profesor_id._id.toString() !== req.usuario._id.toString()) {
+            return res.status(403).json({ error: 'No puedes eliminar clases que no son tuyas' });
+        }
+
+        // Eliminar equipos asociados a esta clase
+        await Equipo.deleteMany({ clase_id: clase._id });
+
+        // Remover personajes de equipos (sistema legacy) que pertenecían a equipos de esta clase
+        const personajesEnClase = await Personaje.find({ usuario_id: { $in: clase.estudiantes.map(e => e._id) } });
+        for (const personaje of personajesEnClase) {
+            // Limpiar referencias de equipos de esta clase en el nuevo sistema
+            if (personaje.equipos_por_clase && personaje.equipos_por_clase.length > 0) {
+                personaje.equipos_por_clase = personaje.equipos_por_clase.filter(
+                    epc => epc.clase_id.toString() !== clase._id.toString()
+                );
+                await personaje.save();
+            }
+        }
+
+        // Eliminar la clase
+        const nombreClase = clase.nombre;
+        const estudiantesCount = clase.estudiantes.length;
+        await Clase.findByIdAndDelete(req.params.id);
+
+        res.json({
+            message: `✅ Clase "${nombreClase}" eliminada exitosamente`,
+            clase_eliminada: {
+                nombre: nombreClase,
+                estudiantes_liberados: estudiantesCount,
+                codigo: clase.codigo_clase
+            }
+        });
+
+    } catch (error) {
+        console.error('Error eliminando clase:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

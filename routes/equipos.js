@@ -89,7 +89,277 @@ router.post('/crear', verificarToken, async (req, res) => {
     }
 });
 
-// ============ LISTAR EQUIPOS ============
+// ============ UNIRSE A EQUIPO V2 (con soporte equipos por clase) ============
+router.post('/:equipo_id/unirse-v2', verificarToken, async (req, res) => {
+    try {
+        if (req.usuario.rol !== 'estudiante') {
+            return res.status(403).json({ error: 'Solo estudiantes pueden unirse a equipos' });
+        }
+
+        const equipo = await Equipo.findById(req.params.equipo_id).populate('clase_id', 'nombre estudiantes');
+        if (!equipo) {
+            return res.status(404).json({ error: 'Equipo no encontrado' });
+        }
+
+        const personaje = await Personaje.findOne({ usuario_id: req.usuario._id });
+        if (!personaje) {
+            return res.status(404).json({ error: 'Personaje no encontrado' });
+        }
+
+        // Verificar límite de miembros
+        if (equipo.miembros.length >= 4) {
+            return res.status(400).json({ error: 'Equipo lleno (máximo 4 miembros)' });
+        }
+
+        // Verificar si ya es miembro del equipo
+        const yaEsMiembro = equipo.miembros.some(miembroId => 
+            miembroId.toString() === personaje._id.toString()
+        );
+        if (yaEsMiembro) {
+            return res.status(400).json({ error: 'Ya eres miembro de este equipo' });
+        }
+
+        // NUEVA LÓGICA: Verificar según tipo de equipo
+        if (equipo.clase_id) {
+            // Equipo de clase específica
+            const estaEnClase = equipo.clase_id.estudiantes.some(estudianteId => 
+                estudianteId.toString() === req.usuario._id.toString()
+            );
+            
+            if (!estaEnClase) {
+                return res.status(403).json({ 
+                    error: `No puedes unirte a este equipo porque no estás inscrito en la clase "${equipo.clase_id.nombre}"` 
+                });
+            }
+
+            // Verificar si ya tiene equipo en esta clase usando NUEVO SISTEMA
+            const equipoExistenteEnClase = personaje.getEquipoEnClase(equipo.clase_id._id);
+            if (equipoExistenteEnClase) {
+                return res.status(400).json({ 
+                    error: `Ya perteneces a un equipo en la clase "${equipo.clase_id.nombre}". Sal primero del equipo actual.` 
+                });
+            }
+
+            // Unirse usando NUEVO SISTEMA
+            try {
+                await personaje.unirseAEquipoEnClase(equipo._id, equipo.clase_id._id);
+            } catch (error) {
+                return res.status(400).json({ error: error.message });
+            }
+
+        } else {
+            // Equipo global - usar sistema legacy
+            if (personaje.equipo_id) {
+                return res.status(400).json({ error: 'Ya perteneces a un equipo global. Sal primero del actual.' });
+            }
+
+            personaje.equipo_id = equipo._id;
+            await personaje.save();
+        }
+
+        // Agregar al array de miembros del equipo
+        equipo.miembros.push(personaje._id);
+        await equipo.save();
+
+        // Crear historial
+        await new HistorialAccion({
+            usuario_origen: req.usuario._id,
+            usuario_destino: req.usuario._id,
+            tipo_accion: 'unirse_equipo',
+            valor: 1,
+            razon: `Se unió al equipo "${equipo.nombre}"${equipo.clase_id ? ` (Clase: ${equipo.clase_id.nombre})` : ' (Global)'}`,
+            fecha: new Date(),
+            contexto: {
+                equipo_id: equipo._id,
+                clase_id: equipo.clase_id?._id || null
+            }
+        }).save();
+
+        res.json({
+            message: `✅ Te has unido al equipo "${equipo.nombre}"${equipo.clase_id ? ` en la clase ${equipo.clase_id.nombre}` : ''}`,
+            equipo: {
+                ...equipo.toObject(),
+                tipo_equipo: equipo.clase_id ? 'clase' : 'global'
+            },
+            version: 'v2'
+        });
+
+    } catch (error) {
+        console.error('Error en unirse-v2:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============ SALIR DE EQUIPO V2 (con soporte equipos por clase) ============
+router.post('/salir-v2', verificarToken, async (req, res) => {
+    try {
+        const { clase_id = null } = req.body;
+        
+        console.log('🔍 DEBUG salir-v2 - Request:', { clase_id, usuario: req.usuario._id });
+        
+        if (req.usuario.rol !== 'estudiante') {
+            return res.status(403).json({ error: 'Solo estudiantes pueden salir de equipos' });
+        }
+
+        const personaje = await Personaje.findOne({ usuario_id: req.usuario._id });
+        if (!personaje) {
+            return res.status(404).json({ error: 'Personaje no encontrado' });
+        }
+
+        let equipoId = null;
+        let nombreEquipo = '';
+        let nombreClase = '';
+
+        if (clase_id) {
+            // Salir de equipo en clase específica usando NUEVO SISTEMA
+            const equipoEnClase = personaje.getEquipoEnClase(clase_id);
+            if (!equipoEnClase) {
+                return res.status(400).json({ error: 'No perteneces a ningún equipo en esta clase' });
+            }
+
+            const equipo = await Equipo.findById(equipoEnClase).populate('clase_id', 'nombre');
+            if (!equipo) {
+                return res.status(404).json({ error: 'Equipo no encontrado' });
+            }
+
+            try {
+                const resultado = await personaje.salirDeEquipoEnClase(clase_id);
+                
+                equipoId = resultado.equipo_id;
+                nombreEquipo = equipo.nombre;
+                nombreClase = equipo.clase_id?.nombre || '';
+            } catch (error) {
+                console.error('❌ Error al salir del equipo en clase:', error);
+                return res.status(400).json({ error: error.message });
+            }
+
+        } else {
+            // Salir de equipo global usando sistema legacy
+            if (!personaje.equipo_id) {
+                return res.status(400).json({ error: 'No perteneces a ningún equipo global' });
+            }
+
+            const equipo = await Equipo.findById(personaje.equipo_id);
+            if (!equipo) {
+                return res.status(404).json({ error: 'Equipo no encontrado' });
+            }
+
+            equipoId = equipo._id;
+            nombreEquipo = equipo.nombre;
+            personaje.equipo_id = null;
+            await personaje.save();
+        }
+
+        // Remover del array de miembros del equipo
+        const equipo = await Equipo.findById(equipoId);
+        if (equipo) {
+            equipo.miembros = equipo.miembros.filter(
+                miembroId => miembroId.toString() !== personaje._id.toString()
+            );
+            await equipo.save();
+        }
+
+        // Crear historial
+        await new HistorialAccion({
+            usuario_origen: req.usuario._id,
+            usuario_destino: req.usuario._id,
+            tipo_accion: 'salir_equipo',
+            valor: -1,
+            razon: `Salió del equipo "${nombreEquipo}"${nombreClase ? ` (Clase: ${nombreClase})` : ''}`,
+            fecha: new Date(),
+            contexto: {
+                equipo_id: equipoId,
+                clase_id: clase_id || null
+            }
+        }).save();
+
+        const mensaje = nombreClase ? 
+            `✅ Has salido del equipo "${nombreEquipo}" en la clase ${nombreClase}` :
+            `✅ Has salido del equipo "${nombreEquipo}"`;
+
+        console.log('🎉 Salida exitosa:', { mensaje, equipoId, nombreEquipo, nombreClase });
+
+        res.json({
+            message: mensaje,
+            version: 'v2'
+        });
+
+    } catch (error) {
+        console.error('Error en salir-v2:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============ INFO DE EQUIPOS DEL ESTUDIANTE V2 ============
+router.get('/mis-equipos-v2', verificarToken, async (req, res) => {
+    try {
+        if (req.usuario.rol !== 'estudiante') {
+            return res.status(403).json({ error: 'Solo estudiantes pueden ver sus equipos' });
+        }
+
+        const personaje = await Personaje.findOne({ usuario_id: req.usuario._id });
+        if (!personaje) {
+            return res.status(404).json({ error: 'Personaje no encontrado' });
+        }
+
+        const todosLosEquipos = personaje.obtenerTodosLosEquipos();
+        
+        if (todosLosEquipos.length === 0) {
+            return res.json({
+                equipos: [],
+                mensaje: 'No perteneces a ningún equipo',
+                version: 'v2'
+            });
+        }
+
+        // Obtener información completa de los equipos
+        const equiposCompletos = await Promise.all(
+            todosLosEquipos.map(async (equipoInfo) => {
+                const equipo = await Equipo.findById(equipoInfo.equipo_id)
+                    .populate('clase_id', 'nombre codigo_clase')
+                    .populate('profesor_id', 'nombre')
+                    .populate({
+                        path: 'miembros',
+                        populate: {
+                            path: 'usuario_id',
+                            select: 'nombre'
+                        }
+                    });
+
+                if (!equipo) return null;
+
+                return {
+                    id: equipo._id.toString(), // 🔧 FIX V2: Convertir ObjectId a string
+                    nombre: equipo.nombre,
+                    puntos: equipo.puntos,
+                    miembros: equipo.miembros.length,
+                    profesor: equipo.profesor_id?.nombre || 'Profesor',
+                    tipo: equipoInfo.tipo,
+                    fecha_union: equipoInfo.fecha_union,
+                    clase_info: equipoInfo.clase_id ? {
+                        id: equipoInfo.clase_id.toString(), // 🔧 FIX V2: Convertir ObjectId a string
+                        nombre: equipo.clase_id?.nombre || 'Clase sin nombre',
+                        codigo: equipo.clase_id?.codigo_clase || 'Sin código'
+                    } : null
+                };
+            })
+        );
+
+        const equiposValidos = equiposCompletos.filter(e => e !== null);
+
+        res.json({
+            equipos: equiposValidos,
+            total: equiposValidos.length,
+            mensaje: `Perteneces a ${equiposValidos.length} equipo(s)`,
+            version: 'v2',
+            necesita_migracion: personaje.necesitaMigracion()
+        });
+
+    } catch (error) {
+        console.error('Error en mis-equipos-v2:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 router.get('/', verificarToken, async (req, res) => {
     try {
         const { mi_equipo = false, clase_id = null } = req.query;
@@ -182,9 +452,19 @@ router.get('/', verificarToken, async (req, res) => {
             .populate('clase_id', 'nombre codigo_clase')
             .sort({ puntos: -1, nombre: 1 });
 
+        // 🔧 DEBUG: Verificar si el transform está funcionando
+        console.log('🔍 DEBUGGING EQUIPOS EN ENDPOINT V2:');
+        if (equipos.length > 0) {
+            const equipoTest = equipos[0];
+            console.log('Equipo original:', equipoTest);
+            console.log('Equipo.miembros tipos:', equipoTest.miembros.map(m => typeof m));
+            console.log('Equipo.miembros valores:', equipoTest.miembros);
+            console.log('Equipo JSON:', JSON.stringify(equipoTest, null, 2));
+        }
+
         const equiposConStats = equipos.map(equipo => {
             const miembrosData = equipo.miembros.map(personaje => ({
-                id: personaje._id,
+                id: personaje._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: personaje.usuario_id?.nombre || 'Usuario sin nombre',
                 email: personaje.usuario_id?.email || '',
                 nivel: personaje.nivel,
@@ -209,7 +489,7 @@ router.get('/', verificarToken, async (req, res) => {
             }
 
             return {
-                id: equipo._id,
+                id: equipo._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 ...equipo.toObject(),
                 miembros: miembrosData,
                 cantidad_miembros: miembrosData.length,
@@ -217,7 +497,7 @@ router.get('/', verificarToken, async (req, res) => {
                 puede_unirse: puedeUnirse,
                 tipo_equipo: equipo.clase_id ? 'clase' : 'global',
                 clase_info: equipo.clase_id ? {
-                    id: equipo.clase_id._id,
+                    id: equipo.clase_id._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                     nombre: equipo.clase_id.nombre,
                     codigo: equipo.clase_id.codigo_clase
                 } : null
@@ -236,6 +516,126 @@ router.get('/', verificarToken, async (req, res) => {
         });
 
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================================================
+// NUEVAS RUTAS PARA SISTEMA DE EQUIPOS POR CLASE (v2)
+// =====================================================
+
+// ============ LISTAR EQUIPOS V2 (REESCRITO DESDE CERO SIN POPULATE) ============
+router.get('/v2', verificarToken, async (req, res) => {
+    try {
+        const { mi_equipo = false, clase_id = null } = req.query;
+
+        // Filtro base
+        let filtroEquipos = {};
+        if (req.usuario.rol === 'profesor') {
+            filtroEquipos.profesor_id = req.usuario._id;
+            if (clase_id) {
+                filtroEquipos.clase_id = clase_id;
+            }
+        } else if (req.usuario.rol === 'estudiante') {
+            // Lógica para estudiantes con clase_id
+            if (clase_id) {
+                // Verificar que el estudiante esté en la clase
+                const clase = await Clase.findById(clase_id);
+                if (!clase || !clase.estudiantes.includes(req.usuario._id)) {
+                    return res.status(403).json({ error: 'No tienes acceso a esta clase' });
+                }
+                filtroEquipos.clase_id = clase_id;
+            }
+        }
+
+        console.log('🔥 ENDPOINT V2 - Iniciando con filtros:', { clase_id, usuario_rol: req.usuario.rol, filtroEquipos });
+        
+        // Obtener equipos SIN populate (crudo)
+        const equiposCrudos = await Equipo.find(filtroEquipos).lean();
+        
+        console.log('📦 Equipos crudos encontrados:', equiposCrudos.length);
+        
+        // Procesar cada equipo manualmente
+        const equiposProcesados = [];
+        
+        for (const equipo of equiposCrudos) {
+            const miembrosDetalle = [];
+            
+            // Buscar miembros manualmente
+            for (const miembroId of equipo.miembros) {
+                const personaje = await Personaje.findById(miembroId).lean();
+                if (!personaje) continue;
+                
+                const usuario = await Usuario.findById(personaje.usuario_id).lean();
+                if (!usuario) continue;
+                
+                miembrosDetalle.push({
+                    id: personaje._id.toString(),
+                    nombre: usuario.nombre,
+                    email: usuario.email,
+                    nivel: usuario.nivel || 1,
+                    experiencia: usuario.experiencia || 0,
+                    salud: personaje.salud_actual || 0,
+                    energia: personaje.energia_actual || 0
+                });
+            }
+            
+            // Buscar información del profesor
+            let profesorInfo = null;
+            if (equipo.profesor_id) {
+                console.log(`👨‍🏫 Buscando profesor con ID: ${equipo.profesor_id}`);
+                const profesor = await Usuario.findById(equipo.profesor_id).lean();
+                if (profesor) {
+                    profesorInfo = {
+                        id: profesor._id.toString(),
+                        nombre: profesor.nombre,
+                        email: profesor.email
+                    };
+                    console.log(`✅ Profesor encontrado: ${profesor.nombre}`);
+                } else {
+                    console.log(`❌ Profesor NO encontrado para ID: ${equipo.profesor_id}`);
+                }
+            } else {
+                console.log('❌ Equipo sin profesor_id');
+            }
+            
+            // Buscar información de la clase si existe
+            let claseInfo = null;
+            if (equipo.clase_id) {
+                const clase = await Clase.findById(equipo.clase_id).lean();
+                if (clase) {
+                    claseInfo = {
+                        id: clase._id.toString(),
+                        nombre: clase.nombre,
+                        codigo: clase.codigo_clase
+                    };
+                }
+            }
+            
+            equiposProcesados.push({
+                id: equipo._id.toString(),
+                nombre: equipo.nombre,
+                puntos: equipo.puntos || 0,
+                profesor_info: profesorInfo, // 🔥 INFORMACIÓN DEL PROFESOR AÑADIDA
+                clase_id: equipo.clase_id ? equipo.clase_id.toString() : null,
+                clase_info: claseInfo,
+                miembros: miembrosDetalle,
+                cantidad_miembros: miembrosDetalle.length,
+                espacios_disponibles: 4 - miembrosDetalle.length,
+                puede_unirse: req.usuario.rol === 'estudiante' && miembrosDetalle.length < 4,
+                tipo_equipo: equipo.clase_id ? 'clase' : 'global'
+            });
+        }
+
+        res.json({ 
+            equipos: equiposProcesados,
+            total_equipos: equiposProcesados.length,
+            version: 'v2-fixed',
+            mensaje: 'Equipos cargados'
+        });
+
+    } catch (error) {
+        console.error('Error en equipos v2:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -505,6 +905,82 @@ router.put('/:equipo_id/puntos', verificarToken, async (req, res) => {
     }
 });
 
+// ============ ELIMINAR EQUIPO (Solo Profesores) ============
+router.delete('/:equipo_id', verificarToken, async (req, res) => {
+    try {
+        if (req.usuario.rol !== 'profesor') {
+            return res.status(403).json({ error: 'Solo profesores pueden eliminar equipos' });
+        }
+
+        const equipo = await Equipo.findById(req.params.equipo_id)
+            .populate('miembros', 'usuario_id')
+            .populate('clase_id', 'nombre');
+            
+        if (!equipo) {
+            return res.status(404).json({ error: 'Equipo no encontrado' });
+        }
+
+        // Verificar que el profesor sea el dueño del equipo
+        if (equipo.profesor_id.toString() !== req.usuario._id.toString()) {
+            return res.status(403).json({ error: 'No puedes eliminar equipos que no son tuyos' });
+        }
+
+        // Remover referencias del equipo en personajes (sistema legacy)
+        for (const miembro of equipo.miembros) {
+            const personaje = await Personaje.findById(miembro._id);
+            if (personaje && personaje.equipo_id && personaje.equipo_id.toString() === equipo._id.toString()) {
+                personaje.equipo_id = null;
+                await personaje.save();
+            }
+
+            // Remover de sistema nuevo (equipos_por_clase)
+            if (personaje && personaje.equipos_por_clase && personaje.equipos_por_clase.length > 0) {
+                personaje.equipos_por_clase = personaje.equipos_por_clase.filter(
+                    epc => epc.equipo_id.toString() !== equipo._id.toString()
+                );
+                await personaje.save();
+            }
+        }
+
+        // Crear historial para cada miembro
+        for (const miembro of equipo.miembros) {
+            if (miembro.usuario_id) {
+                await new HistorialAccion({
+                    usuario_origen: req.usuario._id,
+                    usuario_destino: miembro.usuario_id,
+                    tipo_accion: 'eliminar_equipo',
+                    valor: 0,
+                    razon: `El equipo "${equipo.nombre}" fue eliminado por el profesor${equipo.clase_id ? ` (Clase: ${equipo.clase_id.nombre})` : ''}`,
+                    fecha: new Date(),
+                    contexto: {
+                        equipo_id: equipo._id,
+                        clase_id: equipo.clase_id?._id || null
+                    }
+                }).save();
+            }
+        }
+
+        // Eliminar el equipo
+        const nombreEquipo = equipo.nombre;
+        const claseInfo = equipo.clase_id?.nombre || 'Global';
+        await Equipo.findByIdAndDelete(req.params.equipo_id);
+
+        res.json({
+            message: `✅ Equipo "${nombreEquipo}" eliminado exitosamente`,
+            equipo_eliminado: {
+                nombre: nombreEquipo,
+                miembros_liberados: equipo.miembros.length,
+                clase: claseInfo,
+                puntos_perdidos: equipo.puntos
+            }
+        });
+
+    } catch (error) {
+        console.error('Error eliminando equipo:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ============ RANKING DE EQUIPOS ============
 router.get('/ranking/:profesor_id?', verificarToken, async (req, res) => {
     try {
@@ -558,7 +1034,7 @@ router.get('/ranking/:profesor_id?', verificarToken, async (req, res) => {
             configuracion: equipo.configuracion,
             tipo_equipo: equipo.clase_id ? 'clase' : 'global',
             clase_info: equipo.clase_id ? {
-                id: equipo.clase_id._id,
+                id: equipo.clase_id._id.toString(), // 🔧 FIX: Convertir ObjectId a string
                 nombre: equipo.clase_id.nombre,
                 codigo: equipo.clase_id.codigo_clase
             } : null

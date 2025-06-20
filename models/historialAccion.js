@@ -20,7 +20,7 @@ const historialAccionSchema = new mongoose.Schema({
   tipo_accion: {
     type: String,
     required: true,
-    enum: ['dar_xp', 'quitar_salud', 'usar_habilidad', 'completar_mision', 'unirse_equipo', 'salir_equipo']
+    enum: ['dar_xp', 'quitar_salud', 'usar_habilidad', 'completar_mision', 'unirse_equipo', 'salir_equipo', 'eliminar_equipo', 'eliminar_clase']
   },
   valor: {
     type: Number,

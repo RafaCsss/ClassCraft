@@ -8,11 +8,12 @@
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1>🎮 <span>Class</span>Craft</h1>
-            <div style="text-align: center; margin-top: 10px;">
-                <span id="userGreeting" style="color: #4a5568; font-size: 1.1em;"></span>
-                <button class="btn btn-secondary btn-logout" style="margin-left: 15px;">Cerrar Sesión</button>
+        <div class="header-content container">
+            <div class="logo-section">
+                <img src="/images/LOGO.png" alt="ClassCraft" class="main-logo" style="max-width: 250px; margin-left: 80px;">
+            </div>
+            <div class="auth-buttons">
+                <button class="btn btn-secondary btn-logout">Cerrar Sesión</button>
             </div>
         </div>
     </div>
@@ -78,6 +79,9 @@
                         <button class="btn btn-info" onclick="toggleVistaEquipos()" id="btnToggleVista">
                             👥 Vista por Equipos
                         </button>
+                        <button class="btn btn-success" onclick="verEquiposDeClase()" id="btnEquiposClase">
+                            ⚔️ Gestionar Equipos
+                        </button>
                         <input type="search" id="buscarEstudiante" placeholder="Buscar estudiante..." 
                                style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; margin: 0 10px;">
                         <button class="btn btn-primary" onclick="mostrarAccionesMasivas()">
@@ -134,6 +138,56 @@
 
     <script src="/js/app.js"></script>
     <script>
+        // 🔥 Helper function QUIRÚRGICO para comparar IDs - ANTI-ObjectId
+        function compararIds(id1, id2) {
+            // Manejar casos null/undefined
+            if (!id1 || !id2) return false;
+            
+            function extraerId(obj) {
+                if (typeof obj === 'string') return obj;
+                if (typeof obj === 'number') return String(obj);
+                
+                if (typeof obj === 'object' && obj !== null) {
+                    // Intentar diferentes estrategias de extracción
+                    if (obj._id) return String(obj._id);
+                    if (obj.$oid) return obj.$oid;
+                    
+                    // Si toString() devuelve algo útil, usarlo
+                    const strResult = obj.toString();
+                    if (strResult !== '[object Object]') return strResult;
+                    
+                    // ÚLTIMO RECURSO: Parsing manual del JSON
+                    try {
+                        const jsonStr = JSON.stringify(obj);
+                        const match = jsonStr.match(/"\$oid":"([a-f0-9]{24})"/); 
+                        if (match) return match[1];
+                        
+                        // Si no hay $oid, buscar cualquier string de 24 caracteres hex
+                        const hexMatch = jsonStr.match(/"([a-f0-9]{24})"/); 
+                        if (hexMatch) return hexMatch[1];
+                    } catch (e) {
+                        console.warn('🚨 Error parseando ObjectId:', e);
+                    }
+                }
+                
+                return String(obj);
+            }
+            
+            const id1String = extraerId(id1);
+            const id2String = extraerId(id2);
+            const resultado = id1String === id2String;
+            
+            // DEBUG: Log de comparaciones para debugging
+            if (window.debugComparaciones) {
+                console.log(`🔍 compararIds: "${id1String}" === "${id2String}" → ${resultado}`);
+                if (!resultado && (typeof id1 === 'object' || typeof id2 === 'object')) {
+                    console.log(`   ↳ Objetos originales:`, {id1, id2});
+                }
+            }
+            
+            return resultado;
+        }
+        
         let claseActual = null;
         let estudiantesData = [];
         let equiposData = [];
@@ -145,7 +199,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('userGreeting').textContent = `Bienvenido, ${currentUser.nombre} (${currentUser.rol})`;
             document.getElementById('navPersonaje').style.display = 'none';
             
             const urlParams = new URLSearchParams(window.location.search);
@@ -183,8 +236,12 @@
                 document.getElementById('codigoClase').textContent = data.clase.codigo;
                 document.getElementById('descripcionClase').textContent = data.clase.descripcion;
 
+                // Cargar equipos ANTES de calcular estadísticas
+                await cargarEquiposClase();
+                
                 const totalEstudiantes = estudiantesData.length;
-                const equiposUnicos = new Set(estudiantesData.filter(e => e.personaje?.equipo_id).map(e => e.personaje.equipo_id)).size;
+                // Contar equipos únicos de esta clase específica
+                const equiposUnicos = equiposData.length;
                 const estudiantesActivos = estudiantesData.filter(e => {
                     const ultimaConexion = new Date(e.ultima_conexion);
                     const hoy = new Date();
@@ -200,7 +257,6 @@
                 document.getElementById('estudiantesActivos').textContent = estudiantesActivos;
                 document.getElementById('promedioNivel').textContent = promedioNivel;
 
-                await cargarEquiposClase();
                 mostrarEstudiantes(estudiantesData);
 
                 cargandoElement.classList.add('hidden');
@@ -222,7 +278,14 @@
 
         async function cargarEquiposClase() {
             try {
-                const response = await fetch('/api/equipos/', {
+                const claseId = claseActual?.id || claseActual?._id;
+                
+                // 🔥 USAR ENDPOINT SIMPLE QUE SABEMOS QUE FUNCIONA
+                const url = claseId ? `/api/equipos-simple/simple?clase_id=${claseId}` : '/api/equipos-simple/simple';
+                
+                console.log('🔥 USANDO ENDPOINT SIMPLE:', url);
+                
+                const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('classcraft_token')}`
                     }
@@ -231,13 +294,13 @@
                 if (response.ok) {
                     const data = await response.json();
                     equiposData = data.equipos || [];
-                    console.log('✅ Equipos cargados:', equiposData.length, equiposData);
+                    console.log('✅ Equipos SIMPLE cargados:', equiposData.length, equiposData);
                 } else {
-                    console.log('❌ Error respuesta equipos:', response.status);
+                    console.log('❌ Error respuesta equipos SIMPLE:', response.status);
                     equiposData = [];
                 }
             } catch (error) {
-                console.error('Error cargando equipos:', error);
+                console.error('Error cargando equipos SIMPLE:', error);
                 equiposData = [];
             }
         }
@@ -264,85 +327,162 @@
         function mostrarEquipos() {
             const listaEquipos = document.getElementById('listaEquipos');
             
-            console.log('🔍 DEBUG mostrarEquipos');
+            console.log('🔍 DEBUG mostrarEquipos V2');
             console.log('equiposData:', equiposData);
-            console.log('estudiantesData:', estudiantesData.map(e => ({ nombre: e.nombre, equipo_id: e.personaje?.equipo_id })));
+            console.log('estudiantesData:', estudiantesData.map(e => ({
+                nombre: e.nombre,
+                id: e._id,
+                personaje_id: e.personaje?._id || 'NO_PERSONAJE'
+            })));
             
-            // Organizar estudiantes por equipos
-            const estudiantesPorEquipo = {};
+            // 🔥 ACTIVAR DEBUG DE COMPARACIONES PARA FIX QUIRÚRGICO
+            window.debugComparaciones = true;
+            console.log('🔥🔥🔥 INICIANDO FIX QUIRÚRGICO DE OBJECTIDS 🔥🔥🔥');
+            
+            // Mostrar estructura de un equipo de ejemplo
+            if (equiposData.length > 0) {
+                console.log('🔍 Estructura del primer equipo:');
+                console.log('- Nombre:', equiposData[0].nombre);
+                console.log('- Miembros array:', equiposData[0].miembros);
+                console.log('- Tipo de miembros:', equiposData[0].miembros.map(m => typeof m));
+                console.log('- Miembros como strings:', equiposData[0].miembros.map(m => {
+                    const idString = typeof m === 'object' ? m.toString() : m;
+                    console.log(`    Miembro ID convertido: ${idString}`);
+                    return idString;
+                }));
+            }
+            
+            // NUEVA LÓGICA: Partir desde los equipos, no desde los estudiantes
             const estudiantesSinEquipo = [];
-            
-            estudiantesData.forEach(estudiante => {
-                if (estudiante.personaje && estudiante.personaje.equipo_id) {
-                    const equipoId = estudiante.personaje.equipo_id;
-                    if (!estudiantesPorEquipo[equipoId]) {
-                        estudiantesPorEquipo[equipoId] = {
-                            equipo: equiposData.find(e => e._id.toString() === equipoId.toString()),
-                            miembros: []
-                        };
-                    }
-                    estudiantesPorEquipo[equipoId].miembros.push(estudiante);
-                } else {
-                    estudiantesSinEquipo.push(estudiante);
-                }
-            });
+            const estudiantesConEquipo = new Set(); // Para tracking
             
             let html = '';
             
             // Mostrar equipos existentes
-            Object.values(estudiantesPorEquipo).forEach(grupoEquipo => {
-                const equipo = grupoEquipo.equipo;
-                const miembros = grupoEquipo.miembros;
-                
-                const equipoNombre = equipo ? equipo.nombre : 'Equipo Desconocido';
-                const equipoPuntos = equipo ? equipo.puntos : 0;
-                const promedioNivel = miembros.length > 0 ? 
-                    Math.round(miembros.reduce((sum, m) => sum + m.nivel, 0) / miembros.length) : 0;
-                
-                html += `
-                    <div class="equipo-seccion" style="background: #e6fffa; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #38b2ac; border: 2px solid #CD853F; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25); transition: all 0.3s ease;">
-                        <div class="equipo-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(205, 133, 63, 0.3); padding-bottom: 10px;">
-                            <div>
-                                <h4 style="color: #2F1B14; margin: 0; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);">⚔️ ${equipoNombre}</h4>
-                                <p style="margin: 5px 0; color: #8B4513;">👥 ${miembros.length}/4 miembros | 🏆 ${equipoPuntos} puntos | 📊 Nivel promedio: ${promedioNivel}</p>
-                            </div>
-                            <div>
-                                ${equipo ? `<button class="btn btn-warning btn-sm" onclick="gestionarPuntosEquipo('${equipo._id}', '${equipoNombre}')"><span style="filter: drop-shadow(1px 1px 2px rgba(139, 69, 19, 0.3));">💰 Puntos</span></button>` : ''}
-                            </div>
-                        </div>
+            if (equiposData.length > 0) {
+                equiposData.forEach(equipo => {
+                    console.log(`🏆 Procesando equipo: ${equipo.nombre}`);
+                    console.log(`   Miembros IDs: ${equipo.miembros}`);
+                    
+                    // Buscar estudiantes que están en este equipo
+                    const miembrosDetalle = [];
+                    
+                    equipo.miembros.forEach(miembroId => {
+                        // 🔥 FIX QUIRÚRGICO: Forzar conversión BRUTAL de ObjectIds
+                        let miembroIdString;
                         
-                        <div class="miembros-equipo" style="display: grid; gap: 10px;">
-                            ${miembros.map(miembro => {
-                                const p = miembro.personaje;
-                                const ultimaConexion = new Date(miembro.ultima_conexion);
-                                const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
-                                
-                                return `
-                                    <div class="miembro-equipo" style="background: white; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center; border: 1px solid rgba(205, 133, 63, 0.2); box-shadow: 0 3px 8px rgba(139, 69, 19, 0.15); transition: all 0.2s ease;">
-                                        <div>
-                                            <h5 style="color: #2F1B14; margin-bottom: 5px; text-shadow: 0.5px 0.5px 1px rgba(139, 69, 19, 0.1);">
-                                                ${miembro.nombre}
-                                                ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
-                                            </h5>
-                                            <p style="margin: 2px 0; font-size: 0.9em; color: #8B4513;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                        if (typeof miembroId === 'object' && miembroId !== null) {
+                            // Si es ObjectId de MongoDB, intentar extraer el string
+                            if (miembroId._id) {
+                                miembroIdString = miembroId._id.toString();
+                            } else if (miembroId.$oid) {
+                                miembroIdString = miembroId.$oid;
+                            } else if (miembroId.toString && miembroId.toString() !== '[object Object]') {
+                                miembroIdString = miembroId.toString();
+                            } else {
+                                // FALLBACK: Extraer manualmente del ObjectId
+                                miembroIdString = JSON.stringify(miembroId).replace(/[{}"]/g, '').split(':')[1] || miembroId;
+                            }
+                        } else {
+                            miembroIdString = String(miembroId);
+                        }
+                        
+                        console.log(`   🔍 Procesando miembro:`);
+                        console.log(`      Original: ${typeof miembroId} = ${miembroId}`);
+                        console.log(`      Convertido: ${miembroIdString}`);
+                        console.log(`      Es ObjectId?: ${miembroId.constructor?.name}`);
+                        console.log(`      JSON: ${JSON.stringify(miembroId)}`);
+                        
+                        // DEBUG: Mostrar todos los IDs disponibles para comparar
+                        console.log('   🔍 IDs disponibles en estudiantesData:');
+                        estudiantesData.forEach(e => {
+                            console.log(`      - ${e.nombre}: usuario_id=${e._id}, personaje_id=${e.personaje?._id || 'NO_PERSONAJE'}`);
+                        });
+                        
+                        // Buscar por personaje_id PRIMERO (más probable), luego por usuario_id
+                        const estudiante = estudiantesData.find(e => 
+                            (e.personaje && compararIds(e.personaje._id, miembroId)) || // Por personaje_id PRIMERO
+                            compararIds(e._id, miembroId) // Por usuario_id después
+                        );
+                        
+                        // DEBUG ADICIONAL: Verificar por qué no encuentra
+                        if (!estudiante) {
+                            console.log(`   ❌ MIEMBRO NO ENCONTRADO - Verificación detallada:`);
+                            console.log(`      Miembro ID buscado: ${miembroIdString}`);
+                            
+                            // Probar cada estudiante individualmente
+                            estudiantesData.forEach(e => {
+                                const usuarioMatch = compararIds(e._id, miembroId);
+                                const personajeMatch = e.personaje && compararIds(e.personaje._id, miembroId);
+                                console.log(`      ${e.nombre}: usuario_id=${e._id} (match: ${usuarioMatch}), personaje_id=${e.personaje?._id || 'NO_PERSONAJE'} (match: ${personajeMatch})`);
+                            });
+                        }
+                        
+                        if (estudiante) {
+                            miembrosDetalle.push(estudiante);
+                            estudiantesConEquipo.add(estudiante._id);
+                            console.log(`   ✅ Miembro encontrado: ${estudiante.nombre}`);
+                        } else {
+                            console.log(`   ❌ Miembro no encontrado para ID: ${miembroIdString}`);
+                            console.log(`   ❌ No coincide con ningún usuario_id ni personaje_id`);
+                        }
+                    });
+                    
+                    const promedioNivel = miembrosDetalle.length > 0 ? 
+                        Math.round(miembrosDetalle.reduce((sum, m) => sum + m.nivel, 0) / miembrosDetalle.length) : 0;
+                    
+                    html += `
+                        <div class="equipo-seccion" style="background: #e6fffa; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #38b2ac; border: 2px solid #CD853F; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25); transition: all 0.3s ease;">
+                            <div class="equipo-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(205, 133, 63, 0.3); padding-bottom: 10px;">
+                                <div>
+                                    <h4 style="color: #2F1B14; margin: 0; text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);">⚔️ ${equipo.nombre}</h4>
+                                    <p style="margin: 5px 0; color: #8B4513;">👥 ${miembrosDetalle.length}/4 miembros | 🏆 ${equipo.puntos} puntos | 📊 Nivel promedio: ${promedioNivel}</p>
+                                </div>
+                                <div>
+                                    <button class="btn btn-warning btn-sm" onclick="gestionarPuntosEquipo('${equipo._id}', '${equipo.nombre}')"><span style="filter: drop-shadow(1px 1px 2px rgba(139, 69, 19, 0.3));">💰 Puntos</span></button>
+                                </div>
+                            </div>
+                            
+                            <div class="miembros-equipo" style="display: grid; gap: 10px;">
+                                ${miembrosDetalle.map(miembro => {
+                                    const p = miembro.personaje;
+                                    const ultimaConexion = new Date(miembro.ultima_conexion);
+                                    const esActivo = (new Date() - ultimaConexion) < 24 * 60 * 60 * 1000;
+                                    
+                                    return `
+                                        <div class="miembro-equipo" style="background: white; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 150px; gap: 15px; align-items: center; border: 1px solid rgba(205, 133, 63, 0.2); box-shadow: 0 3px 8px rgba(139, 69, 19, 0.15); transition: all 0.2s ease;">
+                                            <div>
+                                                <h5 style="color: #2F1B14; margin-bottom: 5px; text-shadow: 0.5px 0.5px 1px rgba(139, 69, 19, 0.1);">
+                                                    ${miembro.nombre}
+                                                    ${esActivo ? '<span style="color: #48bb78;">🟢</span>' : '<span style="color: #a0aec0;">⚫</span>'}
+                                                </h5>
+                                                <p style="margin: 2px 0; font-size: 0.9em; color: #8B4513;">${p.clase || 'N/A'} ${p.raza || ''}</p>
+                                            </div>
+                                            
+                                            <div style="font-size: 0.85em;">
+                                                <div>Nivel: ${miembro.nivel} | XP: ${miembro.experiencia}</div>
+                                                <div>❤️ ${p.salud?.actual || 0}/${p.salud?.maxima || 0} | ⚡ ${p.energia?.actual || 0}/${p.energia?.maxima || 0}</div>
+                                            </div>
+                                            
+                                            <div>
+                                                <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${miembro._id}', '${miembro.nombre}')">
+                                                    ⚡ Acciones
+                                                </button>
+                                            </div>
                                         </div>
-                                        
-                                        <div style="font-size: 0.85em;">
-                                            <div>Nivel: ${miembro.nivel} | XP: ${miembro.experiencia}</div>
-                                            <div>❤️ ${p.salud?.actual || 0}/${p.salud?.maxima || 0} | ⚡ ${p.energia?.actual || 0}/${p.energia?.maxima || 0}</div>
-                                        </div>
-                                        
-                                        <div>
-                                            <button class="btn btn-primary btn-sm" onclick="mostrarModalAcciones('${miembro._id}', '${miembro.nombre}')">
-                                                ⚡ Acciones
-                                            </button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
+                                    `;
+                                }).join('')}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                });
+            }
+            
+            // Identificar estudiantes sin equipo
+            estudiantesData.forEach(estudiante => {
+                if (!estudiantesConEquipo.has(estudiante._id)) {
+                    estudiantesSinEquipo.push(estudiante);
+                }
             });
             
             // Mostrar estudiantes sin equipo
@@ -811,6 +951,12 @@
                         `Última conexión: ${new Date(estudiante.ultima_conexion).toLocaleString()}`);
                 }
             }
+        }
+
+        function verEquiposDeClase() {
+            // Redirigir a la página de equipos con el filtro de la clase actual
+            const claseId = claseActual.id || claseActual._id;
+            window.location.href = `/equipos.html?clase_id=${claseId}`;
         }
 
         function cerrarModal(element) {
